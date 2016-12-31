@@ -1,0 +1,217 @@
+{
+  "type": "FeatureCollection",
+  "generator": "overpass-turbo",
+  "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL.",
+  "timestamp": "2016-12-19T13:15:02Z",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "way/255248363",
+      "properties": {
+        "@id": "way/255248363",
+        "addr:housename": "Santander House",
+        "addr:housenumber": "64",
+        "addr:postcode": "HA1 1DR",
+        "amenity": "bank",
+        "atm": "yes",
+        "building": "yes",
+        "building:levels": "4",
+        "name": "Santander",
+        "source:addr:postcode": "signage"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -0.3366942,
+              51.5817096
+            ],
+            [
+              -0.3366985,
+              51.5816604
+            ],
+            [
+              -0.336708,
+              51.5815497
+            ],
+            [
+              -0.3366262,
+              51.581547
+            ],
+            [
+              -0.3365464,
+              51.5815443
+            ],
+            [
+              -0.3365326,
+              51.5817042
+            ],
+            [
+              -0.3366942,
+              51.5817096
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/255248367",
+      "properties": {
+        "@id": "way/255248367",
+        "building": "yes",
+        "building:levels": "3"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -0.337185,
+              51.5817657
+            ],
+            [
+              -0.3375519,
+              51.5817727
+            ],
+            [
+              -0.3375651,
+              51.581573
+            ],
+            [
+              -0.3372029,
+              51.5815643
+            ],
+            [
+              -0.337185,
+              51.5817657
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/255248369",
+      "properties": {
+        "@id": "way/255248369",
+        "building": "yes"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -0.3366985,
+              51.5816604
+            ],
+            [
+              -0.3369861,
+              51.5816698
+            ],
+            [
+              -0.3369955,
+              51.5815593
+            ],
+            [
+              -0.336708,
+              51.5815497
+            ],
+            [
+              -0.3366985,
+              51.5816604
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/255248371",
+      "properties": {
+        "@id": "way/255248371",
+        "building": "yes",
+        "building:levels": "3"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -0.3372029,
+              51.5815643
+            ],
+            [
+              -0.3369955,
+              51.5815593
+            ],
+            [
+              -0.3369861,
+              51.5816698
+            ],
+            [
+              -0.3369767,
+              51.5817617
+            ],
+            [
+              -0.337185,
+              51.5817657
+            ],
+            [
+              -0.3372029,
+              51.5815643
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/255248375",
+      "properties": {
+        "@id": "way/255248375",
+        "building": "yes"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -0.3365292,
+              51.5817438
+            ],
+            [
+              -0.3365326,
+              51.5817042
+            ],
+            [
+              -0.3365464,
+              51.5815443
+            ],
+            [
+              -0.3364779,
+              51.5815411
+            ],
+            [
+              -0.3363265,
+              51.5815366
+            ],
+            [
+              -0.3362283,
+              51.5815337
+            ],
+            [
+              -0.3362111,
+              51.5817332
+            ],
+            [
+              -0.3365292,
+              51.5817438
+            ]
+          ]
+        ]
+      }
+    }
+  ]
+}
