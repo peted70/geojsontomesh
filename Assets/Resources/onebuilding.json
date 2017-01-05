@@ -1,0 +1,67 @@
+{
+  "features": [
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            [
+              -0.3373753,
+              51.5809216
+            ],
+            [
+              -0.3373509,
+              51.5811925
+            ],
+            [
+              -0.3367201,
+              51.5811707
+            ],
+            [
+              -0.3367779,
+              51.5805272
+            ],
+            [
+              -0.3360766,
+              51.5805029
+            ],
+            [
+              -0.3361076,
+              51.5801581
+            ],
+            [
+              -0.3372642,
+              51.5801982
+            ],
+            [
+              -0.337229,
+              51.5805907
+            ],
+            [
+              -0.3372076,
+              51.580829
+            ],
+            [
+              -0.3371998,
+              51.5809155
+            ],
+            [
+              -0.3373753,
+              51.5809216
+            ]
+          ]
+        ],
+        "type": "Polygon"
+      },
+      "id": "way/135704908",
+      "properties": {
+        "type": "way",
+        "id": "135704908",
+        "tags": {"amenity":"parking","building":"yes","description":"This car park is accessed through 2 sets of 2 lifts. The lifts are Schindler MRLs.","fee":"yes","layer":"2","name":"Saint Anns Centre","parking":"multi-storey","surface":"asphalt","wheelchair":"yes"},
+        "relations": [],
+        "meta": {}
+      },
+      "type": "Feature"
+    }
+  ],
+  "type": "FeatureCollection"
+}

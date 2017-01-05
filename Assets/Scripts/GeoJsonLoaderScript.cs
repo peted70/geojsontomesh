@@ -101,7 +101,7 @@ public class GeoJsonLoaderScript : MonoBehaviour
         var httpStr = @"http://overpass-api.de/api/interpreter?data=[out:json];(node[""building""](51.579687,-0.341837,51.580780,-0.333930);way[""building""](51.579687,-0.341837,51.580780,-0.333930);relation[""building""](51.579687,-0.341837,51.580780,-0.333930););out body;>;out skel qt;";
 
         //var geoJson = Resources.Load("santander") as TextAsset;
-        var geoJson = Resources.Load("out") as TextAsset;
+        var geoJson = Resources.Load("new york") as TextAsset;
 
         fsSerializer serializer = new fsSerializer();
         serializer.Config.GetJsonNameFromMemberName = GetJsonNameFromMemberName;
@@ -126,25 +126,27 @@ public class GeoJsonLoaderScript : MonoBehaviour
         // the origin and then translate to the correct positions.
         // When we are calling an API we will know the lat lon of the requested tile
         // until then we can use a bounding box around all of the buildings..
-        var tileBounds = GetBoundingBoxForBuilding(buildings.First());
-        foreach (var building in buildings)
-        {
-            if (building == buildings.First())
-                continue;
-            var bounds = GetBoundingBoxForBuilding(building);
-            if (bounds == null)
-                continue;
-            tileBounds.Value.Encapsulate(bounds.Value);
-        }
+        //var tileBounds = GetBoundingBoxForBuilding(buildings.First());
+        //foreach (var building in buildings)
+        //{
+        //    if (building == buildings.First())
+        //        continue;
+        //    var bounds = GetBoundingBoxForBuilding(building);
+        //    if (bounds == null)
+        //        continue;
+        //    tileBounds.Value.Encapsulate(bounds.Value);
+        //}
 
         // Use the centre of the tile bounding box
+        var tb = GetBoundingBox(TileBounds);
 
         int buildingCount = 0;
 
         foreach (var building in buildings)
         {
-            //if (++buildingCount != 1)
+            //if (++buildingCount != 10)
             //    continue;
+
             if (building.geometry.coordinates == null)
                 continue;
 
@@ -208,7 +210,7 @@ public class GeoJsonLoaderScript : MonoBehaviour
 
                 g.GetComponent<MeshFilter>().mesh = mesh;
 
-                var dist = tileBounds.Value.center - bound.center;
+                var dist = bound.center - tb.Value.center;
 
                 // also, translate the building in y by half of its height..
                 //dist.y += 
@@ -216,15 +218,26 @@ public class GeoJsonLoaderScript : MonoBehaviour
 
                 Material m = new Material(Shader.Find("Standard"));
                 m.color = Color.green;
-                if (!string.IsNullOrEmpty(building.properties.name))
-                    g.name = building.properties.name;
+                if (building.properties.tags != null)
+                {
+                    if (!string.IsNullOrEmpty(building.properties.tags.name))
+                        g.name = building.properties.tags.name;
+                    else if (!string.IsNullOrEmpty(building.properties.tags.addrhousename))
+                    {
+                        g.name = building.properties.tags.addrhousename;
+                    }
+                    else if (!string.IsNullOrEmpty(building.properties.tags.addrstreet))
+                    {
+                        g.name = building.properties.tags.addrstreet;
+                    }
+                }
                 g.GetComponent<MeshRenderer>().material = m;
                 g.transform.parent = gameObject.transform;
             }
         }
 
         // Now generate a plane and texture it with a map image..
-        var tb = GetBoundingBox(TileBounds);
+        //var tb = GetBoundingBox(TileBounds);
         var poly = tb.Value.ToPolygonFromBounds();
 
         // Centre on the origin..
@@ -235,9 +248,9 @@ public class GeoJsonLoaderScript : MonoBehaviour
         Vector2[] uvs = new Vector2[4];
 
         uvs[0] = new Vector2(0.0f, 0.0f);
-        uvs[1] = new Vector2(1.0f, 0.0f);
+        uvs[1] = new Vector2(0.0f, 1.0f);
         uvs[2] = new Vector2(1.0f, 1.0f);
-        uvs[3] = new Vector2(0.0f, 1.0f);
+        uvs[3] = new Vector2(1.0f, 0.0f);
 
         planeMesh.uv = uvs;
         planeMesh.RecalculateNormals();

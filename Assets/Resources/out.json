@@ -1360,7 +1360,15 @@
       "properties": {
         "type": "way",
         "id": "289168065",
-        "tags": {"addr:housename":"Kelly House","addr:housenumber":"8","addr:postcode":"HA1 1PD","addr:street":"Headstone Road","building":"yes","name":"Kelly Group","website":"http://www.kelly.co.uk/"},
+        "tags": {
+          "addr:housename": "Kelly House",
+          "addr:housenumber": "8",
+          "addr:postcode": "HA1 1PD",
+          "addr:street": "Headstone Road",
+          "building": "yes",
+          "name": "Kelly Group",
+          "website": "http://www.kelly.co.uk/"
+        },
         "relations": [],
         "meta": {}
       },
