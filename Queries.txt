@@ -1,0 +1,55 @@
+http://overpass-api.de/api/interpreter?data=[out:json];out meta;(node["building"](51.579687,-0.341837,51.580780,-0.333930);>;way["building"](51.579687,-0.341837,51.580780,-0.333930);>;relation["building"](51.579687,-0.341837,51.580780,-0.333930);>;);out skel;
+
+http://overpass-api.de/api/interpreter?data=[out:json];out meta;(node["building"](51.579687,-0.341837,51.580780,-0.333930);way["building"](51.579687,-0.341837,51.580780,-0.333930);relation["building"](51.579687,-0.341837,51.580780,-0.333930););
+http://overpass-api.de/api/interpreter?data=(node(poly:"50.7+7.1+50.7+7.12+50.71+7.11");<;);out;
+http://overpass-api.de/api/interpreter?data=[out:json];(node(51.579687, -0.341837,51.580780,-0.333930));out body;
+
+http://overpass-api.de/api/interpreter?data=[out:json];(node["building"](51.579687,-0.341837,51.580780,-0.333930);way["building"](51.579687,-0.341837,51.580780,-0.333930);relation["building"](51.579687,-0.341837,51.580780,-0.333930););out body;>;out skel qt;
+
+        const float minLat = 51.579687f;
+        const float maxLat = 51.580780f;
+        const float minLon = -0.341837f;
+        const float maxLon = -0.333930f;
+
+51.579687,-0.341837,51.580780,-0.333930
+
+[out:json]
+;
+out meta;
+(
+  node
+    ["building"]
+    (51.579687,-0.341837,51.580780,-0.333930);
+  way
+    ["building"]
+    (51.579687,-0.341837,51.580780,-0.333930);
+  relation
+    ["building"]
+    (51.579687,-0.341837,51.580780,-0.333930);
+);
+>;
+out skel;
+
+{{key=building}}
+<osm-script output="json">
+<print mode="meta"/>
+
+  <union>
+    <query type="node">
+      <has-kv k="{{key}}"/>
+  	  <bbox-query s="51.579687" w="-0.341837" n="51.580780" e="-0.333930"/>
+    </query>
+    <query type="way">
+      <has-kv k="{{key}}"/>
+  	<bbox-query s="51.579687" w="-0.341837" n="51.580780" e="-0.333930"/>
+    </query>
+  	  <query type="relation">
+      <has-kv k="{{key}}"/>
+  	  <bbox-query s="51.579687" w="-0.341837" n="51.580780" e="-0.333930"/>
+    </query>
+  </union>
+  <recurse type="down"/>
+  <print mode="skeleton"/>
+</osm-script>
+
+

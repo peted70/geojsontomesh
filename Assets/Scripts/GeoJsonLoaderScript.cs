@@ -55,7 +55,6 @@ public class GeoJsonLoaderScript : MonoBehaviour
     {
         if (building.geometry == null || building.geometry.coordinates == null)
             return null;
-        Bounds? ret = null;
         return GetBoundingBox(building.geometry.coordinates);
     }
 
@@ -82,6 +81,8 @@ public class GeoJsonLoaderScript : MonoBehaviour
     // Use this for initialization
     void Start()
     {
+        // MIN 51.579687, -0.341837
+        // MAX 51.580780, -0.333930
         const float minLat = 51.579687f;
         const float maxLat = 51.580780f;
         const float minLon = -0.341837f;
@@ -96,8 +97,11 @@ public class GeoJsonLoaderScript : MonoBehaviour
             }
         };
 
+        // Can get the OSM data using something like the following..
+        var httpStr = @"http://overpass-api.de/api/interpreter?data=[out:json];(node[""building""](51.579687,-0.341837,51.580780,-0.333930);way[""building""](51.579687,-0.341837,51.580780,-0.333930);relation[""building""](51.579687,-0.341837,51.580780,-0.333930););out body;>;out skel qt;";
+
         //var geoJson = Resources.Load("santander") as TextAsset;
-        var geoJson = Resources.Load("harrowtest") as TextAsset;
+        var geoJson = Resources.Load("out") as TextAsset;
 
         fsSerializer serializer = new fsSerializer();
         serializer.Config.GetJsonNameFromMemberName = GetJsonNameFromMemberName;
@@ -116,7 +120,7 @@ public class GeoJsonLoaderScript : MonoBehaviour
             int x = 3;
         }
 
-        var buildings = deserialized.features.Where(f => f.properties.building != null);
+        var buildings = deserialized.features.Where(f => f.properties != null && f.properties.tags.building != null);
 
         // Need to know the centre of the 'tile' so we can create the buildings at
         // the origin and then translate to the correct positions.
@@ -139,7 +143,7 @@ public class GeoJsonLoaderScript : MonoBehaviour
 
         foreach (var building in buildings)
         {
-            //if (++buildingCount != 5)
+            //if (++buildingCount != 1)
             //    continue;
             if (building.geometry.coordinates == null)
                 continue;
@@ -177,8 +181,8 @@ public class GeoJsonLoaderScript : MonoBehaviour
                 // number of levels or failing that, just one level..
                 const float oneLevel = 30.0f;
                 int numLevels = 1;
-                if (!string.IsNullOrEmpty(building.properties.building_levels))
-                    numLevels = int.Parse(building.properties.building_levels);
+                if (!string.IsNullOrEmpty(building.properties.tags.building_levels))
+                    numLevels = int.Parse(building.properties.tags.building_levels);
                 var mesh = Triangulator.CreateMesh(verts.ToArray(), numLevels * oneLevel);
                 var g = new GameObject();
                 g.AddComponent(typeof(MeshFilter));
@@ -232,8 +236,8 @@ public class GeoJsonLoaderScript : MonoBehaviour
 
         uvs[0] = new Vector2(0.0f, 0.0f);
         uvs[1] = new Vector2(1.0f, 0.0f);
-        uvs[2] = new Vector2(0.0f, 1.0f);
-        uvs[3] = new Vector2(1.0f, 1.0f);
+        uvs[2] = new Vector2(1.0f, 1.0f);
+        uvs[3] = new Vector2(0.0f, 1.0f);
 
         planeMesh.uv = uvs;
         planeMesh.RecalculateNormals();

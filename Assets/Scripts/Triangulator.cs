@@ -229,13 +229,22 @@ public class Triangulator
             int i3 = i1 + count;
             int i4 = i2 + count;
 
+            // Draw the polygons for this double-sided as some
+            // of the buildings appear to follow a different winding
+            // rule..
             indices.Add(i4);
             indices.Add(i1);
             indices.Add(i3);
+            indices.Add(i4);
+            indices.Add(i3);
+            indices.Add(i1);
 
             indices.Add(i2);
             indices.Add(i1);
             indices.Add(i4);
+            indices.Add(i2);
+            indices.Add(i4);
+            indices.Add(i1);
         }
         mesh.triangles = indices.ToArray();
         return mesh;
