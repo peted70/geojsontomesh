@@ -101,12 +101,20 @@ public class GeoJsonLoaderScript : MonoBehaviour
         var httpStr = @"http://overpass-api.de/api/interpreter?data=[out:json];(node[""building""](51.579687,-0.341837,51.580780,-0.333930);way[""building""](51.579687,-0.341837,51.580780,-0.333930);relation[""building""](51.579687,-0.341837,51.580780,-0.333930););out body;>;out skel qt;";
 
         //var geoJson = Resources.Load("santander") as TextAsset;
-        var geoJson = Resources.Load("new york") as TextAsset;
+        var geoJson = Resources.Load("london2") as TextAsset;
 
         fsSerializer serializer = new fsSerializer();
         serializer.Config.GetJsonNameFromMemberName = GetJsonNameFromMemberName;
         serializer.AddConverter(new Converter());
-        fsData data = fsJsonParser.Parse(geoJson.text);
+        fsData data = null;
+        try
+        {
+            data = fsJsonParser.Parse(geoJson.text);
+        }
+        catch (Exception ex)
+        {
+            int x = 3;
+        }
 
         // step 2: deserialize the data
         GeoJsonRoot deserialized = null;
@@ -126,25 +134,25 @@ public class GeoJsonLoaderScript : MonoBehaviour
         // the origin and then translate to the correct positions.
         // When we are calling an API we will know the lat lon of the requested tile
         // until then we can use a bounding box around all of the buildings..
-        //var tileBounds = GetBoundingBoxForBuilding(buildings.First());
-        //foreach (var building in buildings)
-        //{
-        //    if (building == buildings.First())
-        //        continue;
-        //    var bounds = GetBoundingBoxForBuilding(building);
-        //    if (bounds == null)
-        //        continue;
-        //    tileBounds.Value.Encapsulate(bounds.Value);
-        //}
+        var tb = GetBoundingBoxForBuilding(buildings.First());
+        foreach (var building in buildings)
+        {
+            if (building == buildings.First())
+                continue;
+            var bounds = GetBoundingBoxForBuilding(building);
+            if (bounds == null)
+                continue;
+            tb.Value.Encapsulate(bounds.Value);
+        }
 
         // Use the centre of the tile bounding box
-        var tb = GetBoundingBox(TileBounds);
+        //var tb = GetBoundingBox(TileBounds);
 
         int buildingCount = 0;
 
         foreach (var building in buildings)
         {
-            //if (++buildingCount != 10)
+            //if (++buildingCount != 1)
             //    continue;
 
             if (building.geometry.coordinates == null)
@@ -181,7 +189,7 @@ public class GeoJsonLoaderScript : MonoBehaviour
 
                 // Work out the height of the building either from height or estimate from 
                 // number of levels or failing that, just one level..
-                const float oneLevel = 30.0f;
+                const float oneLevel = 16.0f;
                 int numLevels = 1;
                 if (!string.IsNullOrEmpty(building.properties.tags.building_levels))
                     numLevels = int.Parse(building.properties.tags.building_levels);
