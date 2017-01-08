@@ -234,7 +234,7 @@ public class GeoJsonLoaderScript : MonoBehaviour
                     g.transform.Translate(dist);
 
                     Material m = new Material(Shader.Find("Standard"));
-                    m.color = Color.green;
+                    m.color = Color.grey;
                     if (building.properties.tags != null)
                     {
                         if (!string.IsNullOrEmpty(building.properties.tags.name))
@@ -295,7 +295,7 @@ public class GeoJsonLoaderScript : MonoBehaviour
         gobj.AddComponent(typeof(MeshRenderer));
         gobj.GetComponent<MeshFilter>().mesh = planeMesh;
         Material mt = new Material(Shader.Find("Standard"));
-        mt.color = Color.blue;
+        mt.color = Color.white;
         gobj.GetComponent<MeshRenderer>().material = mt;
         //Texture my_img = (Texture)Resources.Load("harrowtestimg");
         //gobj.GetComponent<MeshRenderer>().material.mainTexture = my_img;
