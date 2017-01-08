@@ -4780,7 +4780,7 @@
       "properties": {
         "type": "way",
         "id": "109548828",
-        "tags": {"addr:housenumber":"35","addr:postcode":"WC2E 9BH","addr:street":"Rose street","amenity":"restaurant","building":"yes","contact:phone":"+44 20 78360990","contact:website":"http://carluccios.com","cuisine":"italian","name":"Carluccio's","note":"FIXME: Website says Garrick Street and the receipt as well. The receipt has \\"WC2E 8JE\\" as postcode, and their site 9BH.","takeaway":"yes"},
+        "tags": {"addr:housenumber":"35","addr:postcode":"WC2E 9BH","addr:street":"Rose street","amenity":"restaurant","building":"yes","contact:phone":"+44 20 78360990","contact:website":"http://carluccios.com","cuisine":"italian","name":"Carluccio's","note":"FIXME: Website says Garrick Street and the receipt as well. The receipt has \"WC2E 8JE\" as postcode, and their site 9BH.","takeaway":"yes"},
         "relations": [],
         "meta": {}
       },
@@ -49078,7 +49078,7 @@
       "properties": {
         "type": "way",
         "id": "99952230",
-        "tags": {"addr:city":"London","addr:country":"GB","addr:housenumber":"53","addr:postcode":"WC2R 0HS","addr:street":"Strand","building":"yes","note":"Upper floors developed as \\"4 luxury apartments\\" in 2013"},
+        "tags": {"addr:city":"London","addr:country":"GB","addr:housenumber":"53","addr:postcode":"WC2R 0HS","addr:street":"Strand","building":"yes","note":"Upper floors developed as \"4 luxury apartments\" in 2013"},
         "relations": [],
         "meta": {}
       },

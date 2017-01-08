@@ -83,10 +83,15 @@ public class GeoJsonLoaderScript : MonoBehaviour
     {
         // MIN 51.579687, -0.341837
         // MAX 51.580780, -0.333930
-        const float minLat = 51.579687f;
-        const float maxLat = 51.580780f;
-        const float minLon = -0.341837f;
-        const float maxLon = -0.333930f;
+        //const float minLat = 51.579687f;
+        //const float maxLat = 51.580780f;
+        //const float minLon = -0.341837f;
+        //const float maxLon = -0.333930f;
+
+        float maxLat = 51.5140574994f;
+        float maxLon = -0.1145303249f;
+        float minLat = 51.5073134351f;
+        float minLon = -0.1295164166f;
 
         float[][][] TileBounds = new float[][][] 
         { 
@@ -146,101 +151,110 @@ public class GeoJsonLoaderScript : MonoBehaviour
         }
 
         // Use the centre of the tile bounding box
-        //var tb = GetBoundingBox(TileBounds);
+        tb = GetBoundingBox(TileBounds);
 
         int buildingCount = 0;
 
         foreach (var building in buildings)
         {
+            try
+            { 
             //if (++buildingCount != 1)
             //    continue;
 
             if (building.geometry.coordinates == null)
                 continue;
 
-            foreach (var coords in building.geometry.coordinates)
+                foreach (var coords in building.geometry.coordinates)
+                {
+                    // Create Vector2 vertices
+                    List<Vector2> verts = new List<Vector2>();
+
+                    foreach (var crd in coords)
+                    {
+                        // remember lat/lon are reversed in geoJSON
+                        verts.Add(GM.LatLonToMeters(crd[1], crd[0]));
+                    }
+
+                    // Create the Vector3 vertices - 
+                    // So, x corresponds to latitude 
+                    // z corresponds to longitude
+                    List<Vector3> verts3 = verts.Select(v => v.ToVector3xz()).ToList();
+
+                    // Calculate axis aligned bounding box for polygon
+                    var bound = new Bounds(verts3[0], Vector3.zero);
+                    foreach (var vtx in verts3)
+                    {
+                        bound.Encapsulate(vtx);
+                    }
+
+                    // Move the polygon to the origin by subtracting the centre of the bounding box from 
+                    // each vertex.
+                    verts = verts3.Select(vtx => (vtx - bound.center).ToVector2xz()).ToList();
+
+                    Debug.Log(string.Format("NUM VERTS (before triangulation) = {0}", verts.Count));
+
+                    // Work out the height of the building either from height or estimate from 
+                    // number of levels or failing that, just one level..
+                    const float oneLevel = 16.0f;
+                    int numLevels = 1;
+                    if (!string.IsNullOrEmpty(building.properties.tags.building_levels))
+                    {
+                        numLevels = int.Parse(building.properties.tags.building_levels);
+                    }
+                    var mesh = Triangulator.CreateMesh(verts.ToArray(), numLevels * oneLevel);
+                    var g = new GameObject();
+                    g.AddComponent(typeof(MeshFilter));
+                    g.AddComponent(typeof(MeshRenderer));
+
+                    // If you want to get flat shading then you need a unique vertex for each 
+                    // face. I haven't processed the data like that so have run this code as a post 
+                    // process to generate the required vertices 
+                    // (see http://answers.unity3d.com/questions/798510/flat-shading.html)
+                    Vector3[] oldVerts = mesh.vertices;
+                    int[] triangles = mesh.triangles;
+                    Vector3[] vertices = new Vector3[triangles.Length];
+                    for (int i = 0; i < triangles.Length; i++)
+                    {
+                        vertices[i] = oldVerts[triangles[i]];
+                        triangles[i] = i;
+                    }
+                    mesh.vertices = vertices;
+                    mesh.triangles = triangles;
+
+                    mesh.RecalculateBounds();
+                    mesh.RecalculateNormals();
+
+                    g.GetComponent<MeshFilter>().mesh = mesh;
+
+                    var dist = bound.center - tb.Value.center;
+
+                    // also, translate the building in y by half of its height..
+                    //dist.y += 
+                    g.transform.Translate(dist);
+
+                    Material m = new Material(Shader.Find("Standard"));
+                    m.color = Color.green;
+                    if (building.properties.tags != null)
+                    {
+                        if (!string.IsNullOrEmpty(building.properties.tags.name))
+                            g.name = building.properties.tags.name;
+                        else if (!string.IsNullOrEmpty(building.properties.tags.addrhousename))
+                        {
+                            g.name = building.properties.tags.addrhousename;
+                        }
+                        else if (!string.IsNullOrEmpty(building.properties.tags.addrstreet))
+                        {
+                            g.name = building.properties.tags.addrstreet;
+                        }
+                    }
+                    g.GetComponent<MeshRenderer>().material = m;
+                    g.transform.parent = gameObject.transform;
+                }
+            }
+            catch (Exception ex)
             {
-                // Create Vector2 vertices
-                List<Vector2> verts = new List<Vector2>();
-
-                foreach (var crd in coords)
-                {
-                    // remember lat/lon are reversed in geoJSON
-                    verts.Add(GM.LatLonToMeters(crd[1], crd[0]));
-                }
-
-                // Create the Vector3 vertices - 
-                // So, x corresponds to latitude 
-                // z corresponds to longitude
-                List<Vector3> verts3 = verts.Select(v => v.ToVector3xz()).ToList();
-
-                // Calculate axis aligned bounding box for polygon
-                var bound = new Bounds(verts3[0], Vector3.zero);
-                foreach (var vtx in verts3)
-                {
-                    bound.Encapsulate(vtx);
-                }
-
-                // Move the polygon to the origin by subtracting the centre of the bounding box from 
-                // each vertex.
-                verts = verts3.Select(vtx => (vtx - bound.center).ToVector2xz()).ToList();
-
-                Debug.Log(string.Format("NUM VERTS (before triangulation) = {0}", verts.Count));
-
-                // Work out the height of the building either from height or estimate from 
-                // number of levels or failing that, just one level..
-                const float oneLevel = 16.0f;
-                int numLevels = 1;
-                if (!string.IsNullOrEmpty(building.properties.tags.building_levels))
-                    numLevels = int.Parse(building.properties.tags.building_levels);
-                var mesh = Triangulator.CreateMesh(verts.ToArray(), numLevels * oneLevel);
-                var g = new GameObject();
-                g.AddComponent(typeof(MeshFilter));
-                g.AddComponent(typeof(MeshRenderer));
-
-                // If you want to get flat shading then you need a unique vertex for each 
-                // face. I haven't processed the data like that so have run this code as a post 
-                // process to generate the required vertices 
-                // (see http://answers.unity3d.com/questions/798510/flat-shading.html)
-                Vector3[] oldVerts = mesh.vertices;
-                int[] triangles = mesh.triangles;
-                Vector3[] vertices = new Vector3[triangles.Length];
-                for (int i = 0; i < triangles.Length; i++)
-                {
-                    vertices[i] = oldVerts[triangles[i]];
-                    triangles[i] = i;
-                }
-                mesh.vertices = vertices;
-                mesh.triangles = triangles;
-
-                mesh.RecalculateBounds();
-                mesh.RecalculateNormals();
-
-                g.GetComponent<MeshFilter>().mesh = mesh;
-
-                var dist = bound.center - tb.Value.center;
-
-                // also, translate the building in y by half of its height..
-                //dist.y += 
-                g.transform.Translate(dist);
-
-                Material m = new Material(Shader.Find("Standard"));
-                m.color = Color.green;
-                if (building.properties.tags != null)
-                {
-                    if (!string.IsNullOrEmpty(building.properties.tags.name))
-                        g.name = building.properties.tags.name;
-                    else if (!string.IsNullOrEmpty(building.properties.tags.addrhousename))
-                    {
-                        g.name = building.properties.tags.addrhousename;
-                    }
-                    else if (!string.IsNullOrEmpty(building.properties.tags.addrstreet))
-                    {
-                        g.name = building.properties.tags.addrstreet;
-                    }
-                }
-                g.GetComponent<MeshRenderer>().material = m;
-                g.transform.parent = gameObject.transform;
+                Debug.Log(string.Format("Building load failed"));
             }
         }
 
@@ -253,14 +267,25 @@ public class GeoJsonLoaderScript : MonoBehaviour
         var planeMesh = Triangulator.CreateMesh(polyArray.ToArray());
 
         // Set the UVs:
-        Vector2[] uvs = new Vector2[4];
+        //Vector2[] uvs = new Vector2[4];
 
-        uvs[0] = new Vector2(0.0f, 0.0f);
-        uvs[1] = new Vector2(0.0f, 1.0f);
-        uvs[2] = new Vector2(1.0f, 1.0f);
-        uvs[3] = new Vector2(1.0f, 0.0f);
+        //uvs[0] = new Vector2(0.0f, 0.0f);
+        //uvs[1] = new Vector2(0.0f, 1.0f);
+        //uvs[2] = new Vector2(1.0f, 1.0f);
+        //uvs[3] = new Vector2(1.0f, 0.0f);
 
-        planeMesh.uv = uvs;
+        {
+            Vector3[] old = planeMesh.vertices;
+            int[] triangles = planeMesh.triangles;
+            Vector3[] vertices = new Vector3[triangles.Length];
+            for (int i = 0; i < triangles.Length; i++)
+            {
+                vertices[i] = old[triangles[i]];
+                triangles[i] = i;
+            }
+        }
+
+        //planeMesh.uv = uvs;
         planeMesh.RecalculateNormals();
         planeMesh.RecalculateBounds();
 
@@ -271,9 +296,9 @@ public class GeoJsonLoaderScript : MonoBehaviour
         gobj.GetComponent<MeshFilter>().mesh = planeMesh;
         Material mt = new Material(Shader.Find("Standard"));
         mt.color = Color.blue;
-        //gobj.GetComponent<MeshRenderer>().material = mt;
-        Texture my_img = (Texture)Resources.Load("harrowtestimg");
-        gobj.GetComponent<MeshRenderer>().material.mainTexture = my_img;
+        gobj.GetComponent<MeshRenderer>().material = mt;
+        //Texture my_img = (Texture)Resources.Load("harrowtestimg");
+        //gobj.GetComponent<MeshRenderer>().material.mainTexture = my_img;
     }
 
     private string GetJsonNameFromMemberName(string arg1, MemberInfo arg2)
