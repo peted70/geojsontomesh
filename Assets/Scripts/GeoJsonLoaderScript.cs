@@ -139,19 +139,19 @@ public class GeoJsonLoaderScript : MonoBehaviour
         // the origin and then translate to the correct positions.
         // When we are calling an API we will know the lat lon of the requested tile
         // until then we can use a bounding box around all of the buildings..
-        var tb = GetBoundingBoxForBuilding(buildings.First());
-        foreach (var building in buildings)
-        {
-            if (building == buildings.First())
-                continue;
-            var bounds = GetBoundingBoxForBuilding(building);
-            if (bounds == null)
-                continue;
-            tb.Value.Encapsulate(bounds.Value);
-        }
+        //var tb = GetBoundingBoxForBuilding(buildings.First());
+        //foreach (var building in buildings)
+        //{
+        //    if (building == buildings.First())
+        //        continue;
+        //    var bounds = GetBoundingBoxForBuilding(building);
+        //    if (bounds == null)
+        //        continue;
+        //    tb.Value.Encapsulate(bounds.Value);
+        //}
 
         // Use the centre of the tile bounding box
-        tb = GetBoundingBox(TileBounds);
+        var tb = GetBoundingBox(TileBounds);
 
         int buildingCount = 0;
 
