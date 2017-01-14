@@ -38,6 +38,8 @@ public class ThreeDMapScript : MonoBehaviour
     public void Load()
     {
         EditorApplication.update += EditorUpdate;
+        EditorUtility.DisplayProgressBar("Loading Map Data..", "", 5.0f);
+
         co = LoadMapAsync();
     }
 
@@ -66,6 +68,8 @@ public class ThreeDMapScript : MonoBehaviour
             }
             else
             {
+                EditorUtility.DisplayProgressBar("Loaded Data..", "", 10.0f);
+
                 Debug.Log(res.downloadHandler.text);
                 var data = ParseData(res.downloadHandler.text);
 
@@ -104,9 +108,16 @@ public class ThreeDMapScript : MonoBehaviour
                 GameObject containerGameObject = new GameObject("MapContainer");
                 containerGameObject.transform.parent = gameObject.transform;
 
+                EditorUtility.DisplayProgressBar("Loading Building Data", "", 15.0f);
                 ProcessBuildings(buildings, tb, containerGameObject);
+                EditorUtility.DisplayProgressBar("Creating Floor", "", 90.0f);
                 GenerateFloorPlane(tb, containerGameObject);
             }
+
+            EditorUtility.DisplayProgressBar("Done", "", 100.0f);
+
+            EditorUtility.ClearProgressBar();
+
             EditorApplication.update -= EditorUpdate;
         }
     }

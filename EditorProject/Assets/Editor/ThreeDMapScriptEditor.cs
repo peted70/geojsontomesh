@@ -13,6 +13,7 @@ public class ThreeDMapScriptEditor : Editor
         ThreeDMapScript myTarget = (ThreeDMapScript)target;
         if (GUILayout.Button("Generate Map"))
         {
+            EditorUtility.DisplayProgressBar("Loading Map Data..", "", 0.0f);
             myTarget.Load();
         }
     }
