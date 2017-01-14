@@ -112,14 +112,7 @@ public class GeoJsonLoaderScript : MonoBehaviour
         serializer.Config.GetJsonNameFromMemberName = GetJsonNameFromMemberName;
         serializer.AddConverter(new Converter());
         fsData data = null;
-        try
-        {
-            data = fsJsonParser.Parse(geoJson.text);
-        }
-        catch (Exception ex)
-        {
-            int x = 3;
-        }
+        data = fsJsonParser.Parse(geoJson.text);
 
         // step 2: deserialize the data
         GeoJsonRoot deserialized = null;
@@ -132,6 +125,8 @@ public class GeoJsonLoaderScript : MonoBehaviour
         {
             int x = 3;
         }
+
+        Debug.Log("Number of features = " + deserialized.features.Count());
 
         var buildings = deserialized.features.Where(f => f.properties != null && f.properties.tags.building != null);
 
@@ -159,8 +154,8 @@ public class GeoJsonLoaderScript : MonoBehaviour
         {
             try
             { 
-            //if (++buildingCount != 1)
-            //    continue;
+            if (++buildingCount != 1)
+                continue;
 
             if (building.geometry.coordinates == null)
                 continue;

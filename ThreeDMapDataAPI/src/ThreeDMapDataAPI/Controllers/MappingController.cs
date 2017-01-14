@@ -28,7 +28,7 @@ namespace ThreeDMapDataAPI.Controllers
                 return new JsonResult(ModelState);
             }
             
-            var httpStr = $"http://overpass-api.de/api/interpreter?data=[out:json];(node[\"building\"]({rect.MinLat},{rect.MinLon},{rect.MaxLat},{rect.MaxLon});way[\"building\"]({rect.MinLat},{rect.MinLon},{rect.MaxLat},{rect.MaxLon});relation[\"building\"]({rect.MinLon},{rect.MinLat},{rect.MaxLon},{rect.MaxLat}););out body;>;out skel qt;";
+            var httpStr = $"http://overpass-api.de/api/interpreter?data=[out:json];(node[\"building\"]({rect.MinLat},{rect.MinLon},{rect.MaxLat},{rect.MaxLon});way[\"building\"]({rect.MinLat},{rect.MinLon},{rect.MaxLat},{rect.MaxLon});relation[\"building\"]({rect.MinLat},{rect.MinLon},{rect.MaxLat},{rect.MaxLon}););out body;>;out skel qt;";
             var http = new HttpClient();
             var tsk = await http.GetAsync(httpStr);
             var strTsk = await tsk.Content.ReadAsStringAsync();
