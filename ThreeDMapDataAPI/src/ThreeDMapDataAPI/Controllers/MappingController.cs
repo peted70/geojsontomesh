@@ -31,7 +31,7 @@ namespace ThreeDMapDataAPI.Controllers
             _he = he;
         }
 
-        // http://localhost:8165/api/mapping?maxLon=51.5140574994&maxLat=-0.1145303249&minLon=51.5073134351&minLat=-0.1295164166
+        // http://localhost:8165/api/mapping?maxLat=51.5140574994&maxLon=-0.1145303249&minLat=51.5073134351&minLon=-0.1295164166
         [HttpGet]
         [ProducesResponseType(typeof(MappingDto), 200)]
         public async Task<ActionResult> Get(GeoRect rect)
@@ -56,7 +56,21 @@ namespace ThreeDMapDataAPI.Controllers
             return Ok(result);
         }
 
-        // http://localhost:8165/api/mapping/image?maxLon=51.5140574994&maxLat=-0.1145303249&minLon=51.5073134351&minLat=-0.1295164166
+        // http://localhost:8165/api/mapping/geojson?maxLat=51.5140574994&maxLon=-0.1145303249&minLat=51.5073134351&minLon=-0.1295164166
+        [HttpGet]
+        [Route("geojson")]
+        [ProducesResponseType(typeof(string), 200)]
+        public async Task<ActionResult> GetGeoJson(GeoRect rect)
+        {
+            if (!ModelState.IsValid)
+            {
+                return new JsonResult(ModelState);
+            }
+            var jsonStr = await GetGeoJSON(rect);
+            return Ok(jsonStr);
+        }
+
+        // http://localhost:8165/api/mapping/image?maxLat=51.5140574994&maxLon=-0.1145303249&minLat=51.5073134351&minLon=-0.1295164166
         [HttpGet]
         [Route("image")]
         [ProducesResponseType(typeof(byte[]), 200)]
@@ -70,7 +84,7 @@ namespace ThreeDMapDataAPI.Controllers
             return Ok(imgTask);
         }
 
-        //http://localhost:8165/api/mapping/metadata?maxLon=51.5140574994&maxLat=-0.1145303249&minLon=51.5073134351&minLat=-0.1295164166
+        //http://localhost:8165/api/mapping/metadata?maxLat=51.5140574994&maxLon=-0.1145303249&minLat=51.5073134351&minLon=-0.1295164166
         [HttpGet]
         [Route("metadata")]
         [ProducesResponseType(typeof(string), 200)]
@@ -85,7 +99,7 @@ namespace ThreeDMapDataAPI.Controllers
         }
 
         //// GET api/values
-        //// http://localhost:8165/api/mapping?maxLon=51.5140574994&maxLat=-0.1145303249&minLon=51.5073134351&minLat=-0.1295164166
+        //// http://localhost:8165/api/mapping?maxLat=51.5140574994&maxLon=-0.1145303249&minLat=51.5073134351&minLon=-0.1295164166
         //[HttpGet]
         //public async Task<ActionResult> Get(GeoRect rect)
         //{
@@ -122,7 +136,7 @@ namespace ThreeDMapDataAPI.Controllers
         {
             var bingKey = Environment.GetEnvironmentVariable("BING_MAPS_KEY");
             var httpStr = $"http://dev.virtualearth.net/REST/v1/Imagery/Map/Aerial?";
-            httpStr += $"mapArea={rect.MinLat},{rect.MinLon},{rect.MaxLat},{rect.MaxLon}";
+            httpStr += $"mapArea={rect.MinLon},{rect.MinLat},{rect.MaxLon},{rect.MaxLat}";
             httpStr += $"&mapSize=1500,1500";
             httpStr += $"&key={bingKey}";
             var http = new HttpClient();
@@ -136,7 +150,7 @@ namespace ThreeDMapDataAPI.Controllers
         {
             var bingKey = Environment.GetEnvironmentVariable("BING_MAPS_KEY");
             var httpStr = $"http://dev.virtualearth.net/REST/v1/Imagery/Map/Aerial?";
-            httpStr += $"mapArea={rect.MinLat},{rect.MinLon},{rect.MaxLat},{rect.MaxLon}";
+            httpStr += $"mapArea={rect.MinLon},{rect.MinLat},{rect.MaxLon},{rect.MaxLat}";
             httpStr += $"&mapSize=1500,1500";
             httpStr += $"&mapMetadata=1";
             httpStr += $"&key={bingKey}";
