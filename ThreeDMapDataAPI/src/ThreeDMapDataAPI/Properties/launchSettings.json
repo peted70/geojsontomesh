@@ -13,6 +13,7 @@
       "launchBrowser": true,
       "launchUrl": "api/mapping",
       "environmentVariables": {
+        "BING_MAPS_KEY": "Ao2x7c_GYEFqgk36vm-Cgqavx85fCQpa40ATEdDIJPATJfyNGVg3RQQoDjEZ2GCM",
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
     },
