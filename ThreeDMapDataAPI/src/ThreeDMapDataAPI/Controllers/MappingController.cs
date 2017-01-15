@@ -70,8 +70,9 @@ namespace ThreeDMapDataAPI.Controllers
             return Ok(imgTask);
         }
 
+        //http://localhost:8165/api/mapping/metadata?maxLon=51.5140574994&maxLat=-0.1145303249&minLon=51.5073134351&minLat=-0.1295164166
         [HttpGet]
-        [Route("api/metadata")]
+        [Route("metadata")]
         [ProducesResponseType(typeof(string), 200)]
         public async Task<ActionResult> GetImageMetadata(GeoRect rect)
         {
@@ -121,11 +122,12 @@ namespace ThreeDMapDataAPI.Controllers
         {
             var bingKey = Environment.GetEnvironmentVariable("BING_MAPS_KEY");
             var httpStr = $"http://dev.virtualearth.net/REST/v1/Imagery/Map/Aerial?";
-            httpStr += "mapArea ={rect.MaxLat},{rect.MinLon},{rect.MinLat},{rect.MaxLon}";
-            httpStr += "&mapSize=1500,1500";
-            httpStr += "&key={bingKey}";
+            httpStr += $"mapArea={rect.MinLat},{rect.MinLon},{rect.MaxLat},{rect.MaxLon}";
+            httpStr += $"&mapSize=1500,1500";
+            httpStr += $"&key={bingKey}";
             var http = new HttpClient();
             var tsk = await http.GetAsync(httpStr);
+            tsk.EnsureSuccessStatusCode();
             var bytesTsk = await tsk.Content.ReadAsByteArrayAsync();
             return bytesTsk;
         }
@@ -134,12 +136,13 @@ namespace ThreeDMapDataAPI.Controllers
         {
             var bingKey = Environment.GetEnvironmentVariable("BING_MAPS_KEY");
             var httpStr = $"http://dev.virtualearth.net/REST/v1/Imagery/Map/Aerial?";
-            httpStr += "mapArea ={rect.MaxLat},{rect.MinLon},{rect.MinLat},{rect.MaxLon}";
-            httpStr += "&mapSize=1500,1500";
-            httpStr += "&mapMetadata=1";
-            httpStr += "&key={bingKey}";
+            httpStr += $"mapArea={rect.MinLat},{rect.MinLon},{rect.MaxLat},{rect.MaxLon}";
+            httpStr += $"&mapSize=1500,1500";
+            httpStr += $"&mapMetadata=1";
+            httpStr += $"&key={bingKey}";
             var http = new HttpClient();
             var tsk = await http.GetAsync(httpStr);
+            tsk.EnsureSuccessStatusCode();
             var str = await tsk.Content.ReadAsStringAsync();
             return str;
         }
