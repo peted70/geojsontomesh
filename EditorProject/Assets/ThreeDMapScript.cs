@@ -16,7 +16,10 @@ public class ThreeDMapScript : MonoBehaviour
     public float minLat = 51.5073134351f;
     public float minLon = -0.1295164166f;
 
-    private IEnumerator co;
+    private IEnumerator _coGeometryData;
+    private IEnumerator _coImage;
+
+    private bool _geomLoaded, _imageLoaded, _metadataLoaded;
 
     // Use this for initialization
     void Start ()
@@ -27,12 +30,37 @@ public class ThreeDMapScript : MonoBehaviour
     public IEnumerator LoadMapAsync()
     {
         // call this 
-        string url = string.Format("http://localhost:8165/api/mapping?maxLat={0}&maxLon={1}&minLat={2}&minLon={3}",
+        string url = string.Format("http://localhost:8165/api/mapping/geojson?maxLat={0}&maxLon={1}&minLat={2}&minLon={3}",
             maxLat, maxLon, minLat, minLon);
 
         UnityWebRequest myWr = UnityWebRequest.Get(url);
         yield return myWr.Send();
+        _geomLoaded = true;
         yield return myWr;
+    }
+
+    public IEnumerator GetMapImage()
+    {
+        string url = string.Format("http://localhost:8165/api/mapping/image?maxLat={0}&maxLon={1}&minLat={2}&minLon={3}",
+            maxLat, maxLon, minLat, minLon);
+
+        using (UnityWebRequest www = UnityWebRequest.GetTexture(url))
+        {
+            yield return www.Send();
+
+            if (www.isError)
+            {
+                Debug.Log(www.error);
+            }
+            else if (www.isDone)
+            {
+                Debug.Log("Image request returned as texture" + (www.isDone ? "done" : "not done"));
+
+                Texture myTexture = DownloadHandlerTexture.GetContent(www);
+                _imageLoaded = true;
+                yield return myTexture;
+            }
+        }
     }
 
     public void Load()
@@ -40,7 +68,8 @@ public class ThreeDMapScript : MonoBehaviour
         EditorApplication.update += EditorUpdate;
         EditorUtility.DisplayProgressBar("Loading Map Data..", "", 5.0f);
 
-        co = LoadMapAsync();
+        _coGeometryData = LoadMapAsync();
+        _coImage = GetMapImage();
     }
 
     private void EditorUpdate()
@@ -54,19 +83,42 @@ public class ThreeDMapScript : MonoBehaviour
                         }
             };
 
-        if (!co.MoveNext())
+        // Want to detect in here when multiple coroutines have completed..
+        if (_imageLoaded && _geomLoaded)
+        {
+            Debug.Log("Loading is DONE!!");
+        }
+
+        if (!_coImage.MoveNext())
+        {
+            Debug.Log("In co image next");
+            var res = _coImage.Current as Texture;
+            if (res == null)
+                return;
+
+            // Set up grid projector...
+            Projector sc = gameObject.AddComponent<Projector>();
+            sc.orthographic = true;
+            sc.nearClipPlane = -10;
+            sc.farClipPlane = 10;
+            sc.orthographicSize = 900;
+
+            // Add GridProjector material from Standard Assets - how?
+            //sc.material.shader = Shader.Find();
+        }
+        if (!_coGeometryData.MoveNext())
         {
             Debug.Log("In move next");
 
-            var res = co.Current as UnityWebRequest;
+            var res = _coGeometryData.Current as UnityWebRequest;
             if (res == null || !res.isDone)
                 return;
 
             if (res.isError)
             {
-                Debug.Log("Error");
+                Debug.Log("Error: " + res.error);
             }
-            else
+            else if (res.isDone)
             {
                 EditorUtility.DisplayProgressBar("Loaded Data..", "", 10.0f);
 
