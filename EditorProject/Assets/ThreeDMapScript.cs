@@ -24,12 +24,6 @@ public class ThreeDMapScript : MonoBehaviour
     private bool _geomDataLoaded, _imageDataLoaded, _metadataDataLoaded;
     private bool _geomFullyLoaded, _imageFullyLoaded, _metadataFullyLoaded;
 
-    // Use this for initialization
-    void Start()
-    {
-
-    }
-
     public IEnumerator LoadMapAsync()
     {
         // call this 
@@ -57,8 +51,33 @@ public class ThreeDMapScript : MonoBehaviour
         EditorApplication.update += EditorUpdate;
         EditorUtility.DisplayProgressBar("Loading Map Data..", "", 5.0f);
 
-        //_coGeometryData = LoadMapAsync();
+        _coGeometryData = LoadMapAsync();
         _coImage = GetMapImage();
+    }
+
+    public void CreateProjector(Texture tex)
+    {
+        var go = new GameObject();
+        go.transform.Rotate(new Vector3(1, 0, 0), -90);
+
+        go.transform.parent = gameObject.transform;
+        var proj = go.AddComponent<Projector>();
+        proj.orthographic = true;
+        proj.orthographicSize = 1500;
+        proj.nearClipPlane = -10;
+        proj.farClipPlane = 10;
+
+        var shader = Shader.Find("Projector/Multiply");
+        if (shader == null)
+        {
+            Debug.Log("Error: Projector/Multiply Shader not available.");
+            return;
+        }
+
+        var mat = new Material(shader);
+        mat.SetTexture("_ShadowTex", tex);
+
+        proj.material = mat;
     }
 
     private void EditorUpdate()
@@ -72,12 +91,6 @@ public class ThreeDMapScript : MonoBehaviour
             }
         };
 
-        // Want to detect in here when multiple coroutines have completed..
-        if (_imageDataLoaded && _geomDataLoaded)
-        {
-            Debug.Log("Loading is DONE!!");
-        }
-
         if (!_coImage.MoveNext())
         {
             Debug.Log("In co image next");
@@ -87,61 +100,20 @@ public class ThreeDMapScript : MonoBehaviour
             if (www.isError)
             {
                 Debug.Log(www.error);
-                EditorUtility.DisplayProgressBar("Done", "", 100.0f);
-                EditorUtility.ClearProgressBar();
-                EditorApplication.update -= EditorUpdate;
             }
             else if (www.isDone)
             {
-                Texture myTexture = DownloadHandlerTexture.GetContent(www);
                 _imageDataLoaded = true;
-                if (myTexture != null)
-                {
-                    // Set up grid projector...
-                    Projector sc = gameObject.AddComponent<Projector>();
-                    sc.orthographic = true;
-                    sc.nearClipPlane = -10;
-                    sc.farClipPlane = 10;
-                    sc.orthographicSize = 900;
+                Texture2D tex = new Texture2D(2, 2);
+                tex.LoadImage(www.downloadHandler.data);
+                CreateProjector(tex);
 
-                    var go = Instantiate(Resources.Load("Prefabs/GridProjector") as GameObject);
-                    go.transform.parent = gameObject.transform;
-                }
-
-                EditorUtility.DisplayProgressBar("Done", "", 100.0f);
-                EditorUtility.ClearProgressBar();
-                EditorApplication.update -= EditorUpdate;
+                //EditorUtility.DisplayProgressBar("Done", "", 100.0f);
+                //EditorUtility.ClearProgressBar();
+                //EditorApplication.update -= EditorUpdate;
             }
-
-            //var res = _coImage.Current as Texture;
-            //if (res != null)
-            //{
-            //    // Set up grid projector...
-            //    Projector sc = gameObject.AddComponent<Projector>();
-            //    sc.orthographic = true;
-            //    sc.nearClipPlane = -10;
-            //    sc.farClipPlane = 10;
-            //    sc.orthographicSize = 900;
-
-            //    var go = Instantiate(Resources.Load("Prefabs/GridProjector") as GameObject);
-            //    go.transform.parent = gameObject.transform;
-
-            //    // Not sure if this is the right way to go...
-            //    //PrefabUtility.InstantiatePrefab(ProjectorPrefab);
-
-            //    // Add GridProjector material from Standard Assets - how?
-            //    //sc.material.shader = Shader.Find();
-            //    // projector.material.SetTexture("_ShadowTex", texture); 
-
-            //    EditorUtility.DisplayProgressBar("Done", "", 100.0f);
-
-            //    EditorUtility.ClearProgressBar();
-
-            //    EditorApplication.update -= EditorUpdate;
-            //}
         }
 
-#if STUFF
         if (!_coGeometryData.MoveNext())
         {
             Debug.Log("In move next");
@@ -204,13 +176,25 @@ public class ThreeDMapScript : MonoBehaviour
                 _geomFullyLoaded = true;
             }
 
-            EditorUtility.DisplayProgressBar("Done", "", 100.0f);
+            //EditorUtility.DisplayProgressBar("Done", "", 100.0f);
 
-            EditorUtility.ClearProgressBar();
+            //EditorUtility.ClearProgressBar();
 
-            EditorApplication.update -= EditorUpdate;
+            //EditorApplication.update -= EditorUpdate;
         }
-#endif
+
+        // Want to detect in here when multiple coroutines have completed..
+        if (_imageDataLoaded && _geomDataLoaded)
+        {
+            Debug.Log("Loading is DONE!!");
+            EditorUtility.DisplayProgressBar("Done", "", 100.0f);
+            EditorUtility.ClearProgressBar();
+            EditorApplication.update -= EditorUpdate;
+
+            _imageDataLoaded = false;
+            _geomDataLoaded = false;
+        }
+
         if (_geomFullyLoaded)
         {
 
