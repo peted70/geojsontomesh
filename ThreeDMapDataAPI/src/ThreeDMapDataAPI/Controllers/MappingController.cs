@@ -81,7 +81,7 @@ namespace ThreeDMapDataAPI.Controllers
                 return new JsonResult(ModelState);
             }
             var imgTask = await GetImageAsync(rect);
-            return Ok(imgTask);
+            return File(imgTask, "image/jpeg");
         }
 
         //http://localhost:8165/api/mapping/metadata?maxLat=51.5140574994&maxLon=-0.1145303249&minLat=51.5073134351&minLon=-0.1295164166
@@ -136,7 +136,7 @@ namespace ThreeDMapDataAPI.Controllers
         {
             var bingKey = Environment.GetEnvironmentVariable("BING_MAPS_KEY");
             var httpStr = $"http://dev.virtualearth.net/REST/v1/Imagery/Map/Aerial?";
-            httpStr += $"mapArea={rect.MinLon},{rect.MinLat},{rect.MaxLon},{rect.MaxLat}";
+            httpStr += $"mapArea={rect.MinLat},{rect.MinLon},{rect.MaxLat},{rect.MaxLon}";
             httpStr += $"&mapSize=1500,1500";
             httpStr += $"&key={bingKey}";
             var http = new HttpClient();
@@ -150,7 +150,7 @@ namespace ThreeDMapDataAPI.Controllers
         {
             var bingKey = Environment.GetEnvironmentVariable("BING_MAPS_KEY");
             var httpStr = $"http://dev.virtualearth.net/REST/v1/Imagery/Map/Aerial?";
-            httpStr += $"mapArea={rect.MinLon},{rect.MinLat},{rect.MaxLon},{rect.MaxLat}";
+            httpStr += $"mapArea={rect.MinLat},{rect.MinLon},{rect.MaxLat},{rect.MaxLon}";
             httpStr += $"&mapSize=1500,1500";
             httpStr += $"&mapMetadata=1";
             httpStr += $"&key={bingKey}";

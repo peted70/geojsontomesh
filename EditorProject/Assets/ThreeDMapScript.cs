@@ -9,7 +9,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.Networking;
 
-public class ThreeDMapScript : MonoBehaviour 
+public class ThreeDMapScript : MonoBehaviour
 {
     public float maxLat = 51.5140574994f;
     public float maxLon = -0.1145303249f;
@@ -19,13 +19,16 @@ public class ThreeDMapScript : MonoBehaviour
     private IEnumerator _coGeometryData;
     private IEnumerator _coImage;
 
-    private bool _geomLoaded, _imageLoaded, _metadataLoaded;
+    public GameObject ProjectorPrefab;
+
+    private bool _geomDataLoaded, _imageDataLoaded, _metadataDataLoaded;
+    private bool _geomFullyLoaded, _imageFullyLoaded, _metadataFullyLoaded;
 
     // Use this for initialization
-    void Start ()
+    void Start()
     {
-		
-	}
+
+    }
 
     public IEnumerator LoadMapAsync()
     {
@@ -35,7 +38,7 @@ public class ThreeDMapScript : MonoBehaviour
 
         UnityWebRequest myWr = UnityWebRequest.Get(url);
         yield return myWr.Send();
-        _geomLoaded = true;
+        _geomDataLoaded = true;
         yield return myWr;
     }
 
@@ -44,23 +47,9 @@ public class ThreeDMapScript : MonoBehaviour
         string url = string.Format("http://localhost:8165/api/mapping/image?maxLat={0}&maxLon={1}&minLat={2}&minLon={3}",
             maxLat, maxLon, minLat, minLon);
 
-        using (UnityWebRequest www = UnityWebRequest.GetTexture(url))
-        {
-            yield return www.Send();
-
-            if (www.isError)
-            {
-                Debug.Log(www.error);
-            }
-            else if (www.isDone)
-            {
-                Debug.Log("Image request returned as texture" + (www.isDone ? "done" : "not done"));
-
-                Texture myTexture = DownloadHandlerTexture.GetContent(www);
-                _imageLoaded = true;
-                yield return myTexture;
-            }
-        }
+        UnityWebRequest www = UnityWebRequest.Get(url);
+        yield return www.Send();
+        yield return www;
     }
 
     public void Load()
@@ -68,23 +57,23 @@ public class ThreeDMapScript : MonoBehaviour
         EditorApplication.update += EditorUpdate;
         EditorUtility.DisplayProgressBar("Loading Map Data..", "", 5.0f);
 
-        _coGeometryData = LoadMapAsync();
+        //_coGeometryData = LoadMapAsync();
         _coImage = GetMapImage();
     }
 
     private void EditorUpdate()
     {
         float[][][] TileBounds = new float[][][]
+        {
+            new float[][]
             {
-                        new float[][]
-                        {
-                            new float[] { maxLon, maxLat, 0.0f },
-                            new float[] { minLon, minLat, 0.0f },
-                        }
-            };
+                new float[] { maxLon, maxLat, 0.0f },
+                new float[] { minLon, minLat, 0.0f },
+            }
+        };
 
         // Want to detect in here when multiple coroutines have completed..
-        if (_imageLoaded && _geomLoaded)
+        if (_imageDataLoaded && _geomDataLoaded)
         {
             Debug.Log("Loading is DONE!!");
         }
@@ -92,20 +81,67 @@ public class ThreeDMapScript : MonoBehaviour
         if (!_coImage.MoveNext())
         {
             Debug.Log("In co image next");
-            var res = _coImage.Current as Texture;
-            if (res == null)
+            var www = _coImage.Current as UnityWebRequest;
+            if (www == null || !www.isDone)
                 return;
+            if (www.isError)
+            {
+                Debug.Log(www.error);
+                EditorUtility.DisplayProgressBar("Done", "", 100.0f);
+                EditorUtility.ClearProgressBar();
+                EditorApplication.update -= EditorUpdate;
+            }
+            else if (www.isDone)
+            {
+                Texture myTexture = DownloadHandlerTexture.GetContent(www);
+                _imageDataLoaded = true;
+                if (myTexture != null)
+                {
+                    // Set up grid projector...
+                    Projector sc = gameObject.AddComponent<Projector>();
+                    sc.orthographic = true;
+                    sc.nearClipPlane = -10;
+                    sc.farClipPlane = 10;
+                    sc.orthographicSize = 900;
 
-            // Set up grid projector...
-            Projector sc = gameObject.AddComponent<Projector>();
-            sc.orthographic = true;
-            sc.nearClipPlane = -10;
-            sc.farClipPlane = 10;
-            sc.orthographicSize = 900;
+                    var go = Instantiate(Resources.Load("Prefabs/GridProjector") as GameObject);
+                    go.transform.parent = gameObject.transform;
+                }
 
-            // Add GridProjector material from Standard Assets - how?
-            //sc.material.shader = Shader.Find();
+                EditorUtility.DisplayProgressBar("Done", "", 100.0f);
+                EditorUtility.ClearProgressBar();
+                EditorApplication.update -= EditorUpdate;
+            }
+
+            //var res = _coImage.Current as Texture;
+            //if (res != null)
+            //{
+            //    // Set up grid projector...
+            //    Projector sc = gameObject.AddComponent<Projector>();
+            //    sc.orthographic = true;
+            //    sc.nearClipPlane = -10;
+            //    sc.farClipPlane = 10;
+            //    sc.orthographicSize = 900;
+
+            //    var go = Instantiate(Resources.Load("Prefabs/GridProjector") as GameObject);
+            //    go.transform.parent = gameObject.transform;
+
+            //    // Not sure if this is the right way to go...
+            //    //PrefabUtility.InstantiatePrefab(ProjectorPrefab);
+
+            //    // Add GridProjector material from Standard Assets - how?
+            //    //sc.material.shader = Shader.Find();
+            //    // projector.material.SetTexture("_ShadowTex", texture); 
+
+            //    EditorUtility.DisplayProgressBar("Done", "", 100.0f);
+
+            //    EditorUtility.ClearProgressBar();
+
+            //    EditorApplication.update -= EditorUpdate;
+            //}
         }
+
+#if STUFF
         if (!_coGeometryData.MoveNext())
         {
             Debug.Log("In move next");
@@ -164,6 +200,8 @@ public class ThreeDMapScript : MonoBehaviour
                 ProcessBuildings(buildings, tb, containerGameObject);
                 EditorUtility.DisplayProgressBar("Creating Floor", "", 90.0f);
                 GenerateFloorPlane(tb, containerGameObject);
+
+                _geomFullyLoaded = true;
             }
 
             EditorUtility.DisplayProgressBar("Done", "", 100.0f);
@@ -171,6 +209,11 @@ public class ThreeDMapScript : MonoBehaviour
             EditorUtility.ClearProgressBar();
 
             EditorApplication.update -= EditorUpdate;
+        }
+#endif
+        if (_geomFullyLoaded)
+        {
+
         }
     }
 
