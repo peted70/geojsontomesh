@@ -18,8 +18,11 @@ public class ThreeDMapScript : MonoBehaviour
 
     private IEnumerator _coGeometryData;
     private IEnumerator _coImage;
+    private IEnumerator _coMetadata;
 
     public GameObject ProjectorPrefab;
+    MetadataRootobject _tileMetadata = null;
+
 
     private bool _geomDataLoaded, _imageDataLoaded, _metadataDataLoaded;
     private bool _geomFullyLoaded, _imageFullyLoaded, _metadataFullyLoaded;
@@ -46,6 +49,17 @@ public class ThreeDMapScript : MonoBehaviour
         yield return www;
     }
 
+    public IEnumerator GetMapMetadata()
+    {
+        string url = string.Format("http://localhost:8165/api/mapping/metadata?maxLat={0}&maxLon={1}&minLat={2}&minLon={3}",
+            maxLat, maxLon, minLat, minLon);
+
+        UnityWebRequest www = UnityWebRequest.Get(url);
+        yield return www.Send();
+        _metadataDataLoaded = true;
+        yield return www;
+    }
+
     public void Load()
     {
         EditorApplication.update += EditorUpdate;
@@ -53,6 +67,7 @@ public class ThreeDMapScript : MonoBehaviour
 
         _coGeometryData = LoadMapAsync();
         _coImage = GetMapImage();
+        _coMetadata = GetMapMetadata();
     }
 
     public void CreateProjector(Texture tex)
@@ -111,6 +126,21 @@ public class ThreeDMapScript : MonoBehaviour
                 //EditorUtility.DisplayProgressBar("Done", "", 100.0f);
                 //EditorUtility.ClearProgressBar();
                 //EditorApplication.update -= EditorUpdate;
+            }
+        }
+
+        if (!_coMetadata.MoveNext())
+        {
+            var www = _coMetadata.Current as UnityWebRequest;
+            if (www == null || !www.isDone)
+                return;
+            if (www.isError)
+            {
+                Debug.Log(www.error);
+            }
+            else if (www.isDone)
+            {
+
             }
         }
 
@@ -199,6 +229,59 @@ public class ThreeDMapScript : MonoBehaviour
         {
 
         }
+    }
+
+    void LoadMetadata(string geoJsonData)
+    {
+        fsSerializer serializer = new fsSerializer();
+        fsData data = null;
+        data = fsJsonParser.Parse(geoJsonData);
+
+        // step 2: deserialize the data
+        serializer.TryDeserialize(data, ref _tileMetadata).AssertSuccessWithoutWarnings();
+
+        Debug.Log(data);
+
+        var bbox = _tileMetadata.resourceSets[0].resources[0].bbox;
+
+        var bMinLat = bbox[0];
+        var bMinLon = bbox[1];
+        var bMaxLat = bbox[2];
+        var bMaxLon = bbox[3];
+
+        // compare these values;
+        var givenCentreLat = _tileMetadata.resourceSets[0].resources[0].mapCenter.coordinates[0];
+        var givenCentreLon = _tileMetadata.resourceSets[0].resources[0].mapCenter.coordinates[1];
+
+        var bCentreLat = bMinLat + (bMaxLat - bMinLat) * 0.5f;
+        var bCentreLon = bMinLon + (bMaxLon - bMinLon) * 0.5f;
+
+        var centreLat = minLat + (maxLat - minLat) * 0.5f;
+        var centreLon = minLon + (maxLon - minLon) * 0.5f;
+
+        // The centres seem to be the same so work from that principle for a bit..
+        var w = int.Parse(_tileMetadata.resourceSets[0].resources[0].imageWidth);
+        var h = int.Parse(_tileMetadata.resourceSets[0].resources[0].imageHeight);
+
+        // distL and distR should be equivalent
+        var distL = minLat - bMinLat;
+        var distR = bMaxLat - minLat;
+
+        var innerWidth = maxLon - minLon;
+        var outerWidth = bMaxLon - bMinLon;
+
+        float propX = innerWidth / outerWidth;
+
+        var newW = (int)Math.Round(w * propX, MidpointRounding.AwayFromZero);
+
+        var innerHeight = maxLat - minLat;
+        var outerHeight = bMaxLat - bMinLat;
+
+        float propY = innerHeight / outerHeight;
+        var newH = (int)Math.Round(h * propY, MidpointRounding.AwayFromZero);
+
+        var ar = newW / (float)newH;
+
     }
 
     private void GenerateFloorPlane(Bounds? tb, GameObject container)
