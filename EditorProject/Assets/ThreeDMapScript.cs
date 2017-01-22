@@ -16,48 +16,22 @@ public class ThreeDMapScript : MonoBehaviour
     public float minLat = 51.5073134351f;
     public float minLon = -0.1295164166f;
 
+    Texture2D _satelliteTexture;
+
     private IEnumerator _coGeometryData;
     private IEnumerator _coImage;
     private IEnumerator _coMetadata;
 
+    private List<EditorCoroutine> _coRoutines;
+
+    private static List<CompletionHandler> Handlers = new List<CompletionHandler>();
+
     public GameObject ProjectorPrefab;
     MetadataRootobject _tileMetadata = null;
 
-
-    private bool _geomDataLoaded, _imageDataLoaded, _metadataDataLoaded;
-    private bool _geomFullyLoaded, _imageFullyLoaded, _metadataFullyLoaded;
-
-    public IEnumerator LoadMapAsync()
+    private static void WhenDone(string name, Action<object> fn, params EditorCoroutine[] routines)
     {
-        // call this 
-        string url = string.Format("http://localhost:8165/api/mapping/geojson?maxLat={0}&maxLon={1}&minLat={2}&minLon={3}",
-            maxLat, maxLon, minLat, minLon);
-
-        UnityWebRequest myWr = UnityWebRequest.Get(url);
-        yield return myWr.Send();
-        _geomDataLoaded = true;
-        yield return myWr;
-    }
-
-    public IEnumerator GetMapImage()
-    {
-        string url = string.Format("http://localhost:8165/api/mapping/image?maxLat={0}&maxLon={1}&minLat={2}&minLon={3}",
-            maxLat, maxLon, minLat, minLon);
-
-        UnityWebRequest www = UnityWebRequest.Get(url);
-        yield return www.Send();
-        yield return www;
-    }
-
-    public IEnumerator GetMapMetadata()
-    {
-        string url = string.Format("http://localhost:8165/api/mapping/metadata?maxLat={0}&maxLon={1}&minLat={2}&minLon={3}",
-            maxLat, maxLon, minLat, minLon);
-
-        UnityWebRequest www = UnityWebRequest.Get(url);
-        yield return www.Send();
-        _metadataDataLoaded = true;
-        yield return www;
+        Handlers.Add(new CompletionHandler(name, fn, routines));
     }
 
     public void Load()
@@ -65,183 +39,37 @@ public class ThreeDMapScript : MonoBehaviour
         EditorApplication.update += EditorUpdate;
         EditorUtility.DisplayProgressBar("Loading Map Data..", "", 5.0f);
 
-        _coGeometryData = LoadMapAsync();
-        _coImage = GetMapImage();
-        _coMetadata = GetMapMetadata();
+        string urlBase = "http://localhost:8165";
+        string urlPath = "api/mapping/";
+        string urlQuery = string.Format("maxLat={0}&maxLon={1}&minLat={2}&minLon={3}", maxLat, maxLon, minLat, minLon);
+
+        string geomUrl = urlBase + "/" + urlPath + "geoJson?" + urlQuery;
+
+        var geomCoroutine = new EditorCoroutine("Geom Loader", geomUrl, GeoJsonLoadingDone);
+        _coRoutines.Add(geomCoroutine);
+
+        string imgUrl = urlBase + "/" + urlPath + "image?" + urlQuery;
+
+        var imageCoroutine = new EditorCoroutine("Satellite Image Loader", imgUrl, MapImageLoadingDone);
+        _coRoutines.Add(imageCoroutine);
+
+        string mdUrl = urlBase + "/" + urlPath + "metadata?" + urlQuery;
+        var imageMetadataCoroutine = new EditorCoroutine("Image Metadata Loader", mdUrl, MapImageMetadataLoadingDone);
+        _coRoutines.Add(imageMetadataCoroutine);
+
+        WhenDone("Image Data Loading", AllImageDataLoaded, imageCoroutine, imageMetadataCoroutine);
+        WhenDone("All Loading", LoadingComplete, imageCoroutine, imageMetadataCoroutine, geomCoroutine);
     }
 
-    public void CreateProjector(Texture tex)
+    private void LoadingComplete(object obj)
     {
-        var go = new GameObject();
-        go.transform.Rotate(new Vector3(1, 0, 0), -90);
-
-        go.transform.parent = gameObject.transform;
-        var proj = go.AddComponent<Projector>();
-        proj.orthographic = true;
-        proj.orthographicSize = 1500;
-        proj.nearClipPlane = -10;
-        proj.farClipPlane = 10;
-
-        var shader = Shader.Find("Projector/Multiply");
-        if (shader == null)
-        {
-            Debug.Log("Error: Projector/Multiply Shader not available.");
-            return;
-        }
-
-        var mat = new Material(shader);
-        mat.SetTexture("_ShadowTex", tex);
-
-        proj.material = mat;
+        EditorUtility.DisplayProgressBar("Done", "", 100.0f);
+        EditorUtility.ClearProgressBar();
+        EditorApplication.update -= EditorUpdate;
     }
 
-    private void EditorUpdate()
+    private void AllImageDataLoaded(object obj)
     {
-        float[][][] TileBounds = new float[][][]
-        {
-            new float[][]
-            {
-                new float[] { maxLon, maxLat, 0.0f },
-                new float[] { minLon, minLat, 0.0f },
-            }
-        };
-
-        if (!_coImage.MoveNext())
-        {
-            Debug.Log("In co image next");
-            var www = _coImage.Current as UnityWebRequest;
-            if (www == null || !www.isDone)
-                return;
-            if (www.isError)
-            {
-                Debug.Log(www.error);
-            }
-            else if (www.isDone)
-            {
-                _imageDataLoaded = true;
-                Texture2D tex = new Texture2D(2, 2);
-                tex.LoadImage(www.downloadHandler.data);
-                CreateProjector(tex);
-
-                //EditorUtility.DisplayProgressBar("Done", "", 100.0f);
-                //EditorUtility.ClearProgressBar();
-                //EditorApplication.update -= EditorUpdate;
-            }
-        }
-
-        if (!_coMetadata.MoveNext())
-        {
-            var www = _coMetadata.Current as UnityWebRequest;
-            if (www == null || !www.isDone)
-                return;
-            if (www.isError)
-            {
-                Debug.Log(www.error);
-            }
-            else if (www.isDone)
-            {
-
-            }
-        }
-
-        if (!_coGeometryData.MoveNext())
-        {
-            Debug.Log("In move next");
-
-            var res = _coGeometryData.Current as UnityWebRequest;
-            if (res == null || !res.isDone)
-                return;
-
-            if (res.isError)
-            {
-                Debug.Log("Error: " + res.error);
-            }
-            else if (res.isDone)
-            {
-                EditorUtility.DisplayProgressBar("Loaded Data..", "", 10.0f);
-
-                Debug.Log(res.downloadHandler.text);
-                var data = ParseData(res.downloadHandler.text);
-
-                Debug.Log("Number of features = " + data.features.Count());
-
-                var buildings = data.features.Where(f => f.properties != null
-                                    && f.properties.tags != null
-                                    && f.properties.tags.building != null);
-
-
-                // Need to know the centre of the 'tile' so we can create the buildings at
-                // the origin and then translate to the correct positions.
-                // When we are calling an API we will know the lat lon of the requested tile
-                // until then we can use a bounding box around all of the buildings..
-                //var tb = GetBoundingBoxForBuilding(buildings.First());
-                //foreach (var building in buildings)
-                //{
-                //    if (building == buildings.First())
-                //        continue;
-                //    var bounds = GetBoundingBoxForBuilding(building);
-                //    if (bounds == null)
-                //        continue;
-                //    tb.Value.Encapsulate(bounds.Value);
-                //}
-
-                // Use the centre of the tile bounding box
-                var tb = GetBoundingBox(TileBounds);
-
-                // If we have an existing child object named MapContainer delete it
-                var previousContainer = gameObject.transform.FindChild("MapContainer");
-                if (previousContainer)
-                {
-                    DestroyImmediate(previousContainer.gameObject);
-                }
-
-                GameObject containerGameObject = new GameObject("MapContainer");
-                containerGameObject.transform.parent = gameObject.transform;
-
-                EditorUtility.DisplayProgressBar("Loading Building Data", "", 15.0f);
-                ProcessBuildings(buildings, tb, containerGameObject);
-                EditorUtility.DisplayProgressBar("Creating Floor", "", 90.0f);
-                GenerateFloorPlane(tb, containerGameObject);
-
-                _geomFullyLoaded = true;
-            }
-
-            //EditorUtility.DisplayProgressBar("Done", "", 100.0f);
-
-            //EditorUtility.ClearProgressBar();
-
-            //EditorApplication.update -= EditorUpdate;
-        }
-
-        // Want to detect in here when multiple coroutines have completed..
-        if (_imageDataLoaded && _geomDataLoaded)
-        {
-            Debug.Log("Loading is DONE!!");
-            EditorUtility.DisplayProgressBar("Done", "", 100.0f);
-            EditorUtility.ClearProgressBar();
-            EditorApplication.update -= EditorUpdate;
-
-            _imageDataLoaded = false;
-            _geomDataLoaded = false;
-        }
-
-        if (_geomFullyLoaded)
-        {
-
-        }
-    }
-
-    void LoadMetadata(string geoJsonData)
-    {
-        fsSerializer serializer = new fsSerializer();
-        fsData data = null;
-        data = fsJsonParser.Parse(geoJsonData);
-
-        // step 2: deserialize the data
-        serializer.TryDeserialize(data, ref _tileMetadata).AssertSuccessWithoutWarnings();
-
-        Debug.Log(data);
-
         var bbox = _tileMetadata.resourceSets[0].resources[0].bbox;
 
         var bMinLat = bbox[0];
@@ -282,6 +110,118 @@ public class ThreeDMapScript : MonoBehaviour
 
         var ar = newW / (float)newH;
 
+        // Don't want to call this until all  of the data is loaded..
+        CreateProjector(_satelliteTexture);
+    }
+
+    private void MapImageMetadataLoadingDone(UnityWebRequest obj)
+    {
+        LoadMetadata(obj.downloadHandler.text);
+
+    }
+
+    private void MapImageLoadingDone(UnityWebRequest www)
+    {
+        _satelliteTexture = new Texture2D(2, 2);
+        _satelliteTexture.LoadImage(www.downloadHandler.data);
+    }
+
+    private void GeoJsonLoadingDone(UnityWebRequest res)
+    {
+        float[][][] TileBounds = new float[][][]
+        {
+            new float[][]
+            {
+                new float[] { maxLon, maxLat, 0.0f },
+                new float[] { minLon, minLat, 0.0f },
+            }
+        };
+
+        EditorUtility.DisplayProgressBar("Loaded Data..", "", 10.0f);
+
+        Debug.Log(res.downloadHandler.text);
+        var data = ParseData(res.downloadHandler.text);
+
+        Debug.Log("Number of features = " + data.features.Count());
+
+        var buildings = data.features.Where(f => f.properties != null
+                            && f.properties.tags != null
+                            && f.properties.tags.building != null);
+
+        // Use the centre of the tile bounding box
+        var tb = GetBoundingBox(TileBounds);
+
+        // If we have an existing child object named MapContainer delete it
+        var previousContainer = gameObject.transform.FindChild("MapContainer");
+        if (previousContainer)
+        {
+            DestroyImmediate(previousContainer.gameObject);
+        }
+
+        GameObject containerGameObject = new GameObject("MapContainer");
+        containerGameObject.transform.parent = gameObject.transform;
+
+        EditorUtility.DisplayProgressBar("Loading Building Data", "", 15.0f);
+        ProcessBuildings(buildings, tb, containerGameObject);
+        EditorUtility.DisplayProgressBar("Creating Floor", "", 90.0f);
+        GenerateFloorPlane(tb, containerGameObject);
+    }
+
+    public void CreateProjector(Texture tex)
+    {
+        var go = new GameObject();
+        go.transform.Rotate(new Vector3(1, 0, 0), -90);
+
+        go.transform.parent = gameObject.transform;
+        var proj = go.AddComponent<Projector>();
+        proj.orthographic = true;
+        proj.orthographicSize = 1500;
+        proj.nearClipPlane = -10;
+        proj.farClipPlane = 10;
+
+        var shader = Shader.Find("Projector/Multiply");
+        if (shader == null)
+        {
+            Debug.Log("Error: Projector/Multiply Shader not available.");
+            return;
+        }
+
+        var mat = new Material(shader);
+        mat.SetTexture("_ShadowTex", tex);
+
+        proj.material = mat;
+    }
+
+    private void EditorUpdate()
+    {
+        // Loop through the co-routines..
+        foreach (var co in _coRoutines)
+        {
+            co.tick();
+        }
+
+        for (int i = Handlers.Count() - 1; i >= 0; --i)
+        {
+            var handler = Handlers[i];
+            if (handler.IsCompleted())
+            {
+                Debug.Log("Notification Handler " + handler.Name + " Complete");
+                handler.Execute();
+                Handlers.RemoveAt(i);
+            }
+        }
+    }
+
+    void LoadMetadata(string geoJsonData)
+    {
+        fsSerializer serializer = new fsSerializer();
+        fsData data = null;
+        data = fsJsonParser.Parse(geoJsonData);
+
+        // step 2: deserialize the data
+        serializer.TryDeserialize(data, ref _tileMetadata).AssertSuccessWithoutWarnings();
+
+        Debug.Log(data);
     }
 
     private void GenerateFloorPlane(Bounds? tb, GameObject container)
@@ -479,5 +419,85 @@ public class ThreeDMapScript : MonoBehaviour
             }
         }
         return ret;
+    }
+}
+
+internal class CompletionHandler
+{
+    private List<EditorCoroutine> _list;
+    private Action<object> _fn;
+    private string _name;
+    public string Name { get { return _name; } }
+
+    public CompletionHandler(string name, Action<object> fn, params EditorCoroutine[] list)
+    {
+        _name = name;
+        _fn = fn;
+        for (int i=0;i<list.Length;i++)
+        {
+            if (_list == null)
+                _list = new List<EditorCoroutine>();
+            _list.Add(list[i]);
+        }
+    }
+
+    public bool IsCompleted()
+    {
+        return _list.TrueForAll(ec => ec.IsComplete());
+    }
+
+    public void Execute()
+    {
+        // Want to pass a list of data for each coroutine here..
+        _fn(_list);
+    }
+}
+
+public class EditorCoroutine : IEnumerable
+{
+    private bool _complete;
+    private string _url;
+    private string _name;
+
+    public bool IsComplete() { return _complete;  }
+
+    public EditorCoroutine(string name, string http, Action<UnityWebRequest> done)
+    {
+        _name = name;
+        _done = done;
+        _url = http;
+    }
+
+    private IEnumerator _iter;
+    private Action<UnityWebRequest> _done;
+
+    public void tick()
+    {
+        if (_complete)
+            return;
+
+        if (!_iter.MoveNext())
+        {
+            var www = _iter.Current as UnityWebRequest;
+            if (www == null || !www.isDone)
+                return;
+            if (www.isError)
+            {
+                Debug.Log(www.error);
+            }
+            else if (www.isDone)
+            {
+                Debug.Log("CoRoutine: " + _name + " Done.");
+                _done(www);
+                _complete = true;
+            }
+        }
+    }
+
+    public IEnumerator GetEnumerator()
+    {
+        UnityWebRequest www = UnityWebRequest.Get(_url);
+        yield return www.Send();
+        yield return www;
     }
 }
