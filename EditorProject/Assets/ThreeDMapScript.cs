@@ -17,17 +17,13 @@ public class ThreeDMapScript : MonoBehaviour
     public float minLon = -0.1295164166f;
 
     Texture2D _satelliteTexture;
-
-    private IEnumerator _coGeometryData;
-    private IEnumerator _coImage;
-    private IEnumerator _coMetadata;
+    MetadataRootobject _tileMetadata = null;
 
     private List<EditorCoroutine> _coRoutines;
 
     private static List<CompletionHandler> Handlers = new List<CompletionHandler>();
 
-    public GameObject ProjectorPrefab;
-    MetadataRootobject _tileMetadata = null;
+    private GameObject _mapContainer;
 
     private static void WhenDone(string name, Action<object> fn, params EditorCoroutine[] routines)
     {
@@ -59,6 +55,8 @@ public class ThreeDMapScript : MonoBehaviour
 
         WhenDone("Image Data Loading", AllImageDataLoaded, imageCoroutine, imageMetadataCoroutine);
         WhenDone("All Loading", LoadingComplete, imageCoroutine, imageMetadataCoroutine, geomCoroutine);
+
+        RecreateMapContainer();
     }
 
     private void LoadingComplete(object obj)
@@ -117,13 +115,26 @@ public class ThreeDMapScript : MonoBehaviour
     private void MapImageMetadataLoadingDone(UnityWebRequest obj)
     {
         LoadMetadata(obj.downloadHandler.text);
-
     }
 
     private void MapImageLoadingDone(UnityWebRequest www)
     {
         _satelliteTexture = new Texture2D(2, 2);
         _satelliteTexture.LoadImage(www.downloadHandler.data);
+    }
+
+    private void RecreateMapContainer()
+    {
+        //// If we have an existing child object named MapContainer delete it
+        var previousContainer = gameObject.transform.FindChild("MapContainer");
+        if (previousContainer)
+        {
+            DestroyImmediate(previousContainer.gameObject);
+        }
+
+        GameObject containerGameObject = new GameObject("MapContainer");
+        containerGameObject.transform.parent = gameObject.transform;
+        _mapContainer = containerGameObject;
     }
 
     private void GeoJsonLoadingDone(UnityWebRequest res)
@@ -151,20 +162,10 @@ public class ThreeDMapScript : MonoBehaviour
         // Use the centre of the tile bounding box
         var tb = GetBoundingBox(TileBounds);
 
-        // If we have an existing child object named MapContainer delete it
-        var previousContainer = gameObject.transform.FindChild("MapContainer");
-        if (previousContainer)
-        {
-            DestroyImmediate(previousContainer.gameObject);
-        }
-
-        GameObject containerGameObject = new GameObject("MapContainer");
-        containerGameObject.transform.parent = gameObject.transform;
-
         EditorUtility.DisplayProgressBar("Loading Building Data", "", 15.0f);
-        ProcessBuildings(buildings, tb, containerGameObject);
+        ProcessBuildings(buildings, tb, _mapContainer);
         EditorUtility.DisplayProgressBar("Creating Floor", "", 90.0f);
-        GenerateFloorPlane(tb, containerGameObject);
+        GenerateFloorPlane(tb, _mapContainer);
     }
 
     public void CreateProjector(Texture tex)
@@ -220,7 +221,6 @@ public class ThreeDMapScript : MonoBehaviour
 
         // step 2: deserialize the data
         serializer.TryDeserialize(data, ref _tileMetadata).AssertSuccessWithoutWarnings();
-
         Debug.Log(data);
     }
 
