@@ -16,10 +16,13 @@ public class ThreeDMapScript : MonoBehaviour
     public float minLat = 51.5073134351f;
     public float minLon = -0.1295164166f;
 
+    private float progress = 0.0f;
+
     Texture2D _satelliteTexture;
     MetadataRootobject _tileMetadata = null;
+    GameObject _tilePlane = null;
 
-    private List<EditorCoroutine> _coRoutines;
+    private List<EditorCoroutine> _coRoutines = new List<EditorCoroutine>();
 
     private static List<CompletionHandler> Handlers = new List<CompletionHandler>();
 
@@ -30,10 +33,16 @@ public class ThreeDMapScript : MonoBehaviour
         Handlers.Add(new CompletionHandler(name, fn, routines));
     }
 
+    private void UpdateProgress(float incr, string msg)
+    {
+        progress += incr;
+        EditorUtility.DisplayProgressBar("Loading Map Data", msg, progress);
+    }
+
     public void Load()
     {
         EditorApplication.update += EditorUpdate;
-        EditorUtility.DisplayProgressBar("Loading Map Data..", "", 5.0f);
+        UpdateProgress(0.02f, "Initialising..");
 
         string urlBase = "http://localhost:8165";
         string urlPath = "api/mapping/";
@@ -57,10 +66,23 @@ public class ThreeDMapScript : MonoBehaviour
         WhenDone("All Loading", LoadingComplete, imageCoroutine, imageMetadataCoroutine, geomCoroutine);
 
         RecreateMapContainer();
+
+        // Create the tile plane..
+        _tilePlane = new GameObject();
+        _tilePlane.name = "Tile Plane";
+        _tilePlane.AddComponent(typeof(MeshFilter));
+        _tilePlane.AddComponent(typeof(MeshRenderer));
+        Material mt = new Material(Shader.Find("Standard"));
+        mt.color = Color.white;
+        _tilePlane.GetComponent<MeshRenderer>().material = mt;
+
+        UpdateProgress(0.02f, "Initialising..");
     }
 
     private void LoadingComplete(object obj)
     {
+        _coRoutines.Clear();
+
         EditorUtility.DisplayProgressBar("Done", "", 100.0f);
         EditorUtility.ClearProgressBar();
         EditorApplication.update -= EditorUpdate;
@@ -108,8 +130,14 @@ public class ThreeDMapScript : MonoBehaviour
 
         var ar = newW / (float)newH;
 
+        float propLon = (bMaxLon - bMinLon) / (maxLon - minLon);
+        float propLat = (bMaxLat - bMinLat) / (maxLat - minLat);
+
+        var prop = propLat > propLon ? propLat : propLon * 2.0f;
+        newW = (int)(1.0f / prop * w / 2.0f);
+
         // Don't want to call this until all  of the data is loaded..
-        CreateProjector(_satelliteTexture);
+        CreateProjector(_satelliteTexture, newW, _tilePlane);
     }
 
     private void MapImageMetadataLoadingDone(UnityWebRequest obj)
@@ -148,7 +176,7 @@ public class ThreeDMapScript : MonoBehaviour
             }
         };
 
-        EditorUtility.DisplayProgressBar("Loaded Data..", "", 10.0f);
+        EditorUtility.DisplayProgressBar("Loaded Data..", "", 0.1f);
 
         Debug.Log(res.downloadHandler.text);
         var data = ParseData(res.downloadHandler.text);
@@ -162,21 +190,21 @@ public class ThreeDMapScript : MonoBehaviour
         // Use the centre of the tile bounding box
         var tb = GetBoundingBox(TileBounds);
 
-        EditorUtility.DisplayProgressBar("Loading Building Data", "", 15.0f);
+        EditorUtility.DisplayProgressBar("Loading Building Data", "", 0.15f);
         ProcessBuildings(buildings, tb, _mapContainer);
-        EditorUtility.DisplayProgressBar("Creating Floor", "", 90.0f);
+        EditorUtility.DisplayProgressBar("Creating Floor", "", 0.9f);
         GenerateFloorPlane(tb, _mapContainer);
     }
 
-    public void CreateProjector(Texture tex)
+    public void CreateProjector(Texture tex, int orthoSize, GameObject parent)
     {
-        var go = new GameObject();
-        go.transform.Rotate(new Vector3(1, 0, 0), -90);
+        var go = new GameObject("Satellite Image Projector");
+        go.transform.Rotate(new Vector3(1, 0, 0), 90);
 
-        go.transform.parent = gameObject.transform;
+        go.transform.parent = parent.transform;
         var proj = go.AddComponent<Projector>();
         proj.orthographic = true;
-        proj.orthographicSize = 1500;
+        proj.orthographicSize = orthoSize;
         proj.nearClipPlane = -10;
         proj.farClipPlane = 10;
 
@@ -195,21 +223,33 @@ public class ThreeDMapScript : MonoBehaviour
 
     private void EditorUpdate()
     {
-        // Loop through the co-routines..
-        foreach (var co in _coRoutines)
+        try
         {
-            co.tick();
-        }
-
-        for (int i = Handlers.Count() - 1; i >= 0; --i)
-        {
-            var handler = Handlers[i];
-            if (handler.IsCompleted())
+            // Loop through the co-routines..
+            foreach (var co in _coRoutines)
             {
-                Debug.Log("Notification Handler " + handler.Name + " Complete");
-                handler.Execute();
-                Handlers.RemoveAt(i);
+                co.tick();
             }
+
+            for (int i = Handlers.Count() - 1; i >= 0; --i)
+            {
+                var handler = Handlers[i];
+                if (handler.IsCompleted())
+                {
+                    Debug.Log("Notification Handler " + handler.Name + " Complete");
+                    handler.Execute();
+                    Handlers.RemoveAt(i);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _coRoutines.Clear();
+
+            EditorUtility.DisplayProgressBar("Done", "", 1.0f);
+            EditorUtility.ClearProgressBar();
+            EditorApplication.update -= EditorUpdate;
+            EditorUtility.DisplayDialog("Error", ex.Message, "OK");
         }
     }
 
@@ -247,16 +287,9 @@ public class ThreeDMapScript : MonoBehaviour
         //planeMesh.uv = uvs;
         planeMesh.RecalculateNormals();
         planeMesh.RecalculateBounds();
-
-        var gobj = new GameObject();
-        gobj.name = "Tile Plane";
-        gobj.AddComponent(typeof(MeshFilter));
-        gobj.AddComponent(typeof(MeshRenderer));
-        gobj.GetComponent<MeshFilter>().mesh = planeMesh;
-        Material mt = new Material(Shader.Find("Standard"));
-        mt.color = Color.white;
-        gobj.GetComponent<MeshRenderer>().material = mt;
-        gobj.transform.parent = container.transform;
+        var planeBounds = planeMesh.bounds;
+        _tilePlane.GetComponent<MeshFilter>().mesh = planeMesh;
+        _tilePlane.transform.parent = container.transform;
     }
 
     private void ProcessBuildings(IEnumerable<Feature> buildings, Bounds? tb, GameObject container)
@@ -466,6 +499,7 @@ public class EditorCoroutine : IEnumerable
         _name = name;
         _done = done;
         _url = http;
+        _iter = GetEnumerator();
     }
 
     private IEnumerator _iter;
@@ -484,6 +518,7 @@ public class EditorCoroutine : IEnumerable
             if (www.isError)
             {
                 Debug.Log(www.error);
+                throw new Exception(www.error);
             }
             else if (www.isDone)
             {
