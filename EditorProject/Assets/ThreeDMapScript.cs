@@ -63,7 +63,6 @@ public class ThreeDMapScript : MonoBehaviour
         var imageMetadataCoroutine = new EditorCoroutine("Image Metadata Loader", mdUrl, MapImageMetadataLoadingDone);
         _coRoutines.Add(imageMetadataCoroutine);
 
-        //WhenDone("Image Data Loading", AllImageDataLoaded, imageCoroutine, imageMetadataCoroutine);
         WhenDone("All Loading", LoadingComplete, imageCoroutine, imageMetadataCoroutine, geomCoroutine);
 
         RecreateMapContainer();
@@ -89,68 +88,6 @@ public class ThreeDMapScript : MonoBehaviour
         EditorUtility.DisplayProgressBar("Done", "", 100.0f);
         EditorUtility.ClearProgressBar();
         EditorApplication.update -= EditorUpdate;
-    }
-
-    private void AllImageDataLoaded(object obj)
-    {
-        var bbox = _tileMetadata.resourceSets[0].resources[0].bbox;
-
-        var bMinLat = bbox[0];
-        var bMinLon = bbox[1];
-        var bMaxLat = bbox[2];
-        var bMaxLon = bbox[3];
-
-        // compare these values;
-        var givenCentreLat = _tileMetadata.resourceSets[0].resources[0].mapCenter.coordinates[0];
-        var givenCentreLon = _tileMetadata.resourceSets[0].resources[0].mapCenter.coordinates[1];
-
-        var bCentreLat = bMinLat + (bMaxLat - bMinLat) * 0.5f;
-        var bCentreLon = bMinLon + (bMaxLon - bMinLon) * 0.5f;
-
-        var centreLat = minLat + (maxLat - minLat) * 0.5f;
-        var centreLon = minLon + (maxLon - minLon) * 0.5f;
-
-        // The centres seem to be the same so work from that principle for a bit..
-        var w = int.Parse(_tileMetadata.resourceSets[0].resources[0].imageWidth);
-        var h = int.Parse(_tileMetadata.resourceSets[0].resources[0].imageHeight);
-
-        // distL and distR should be equivalent
-        var distL = minLat - bMinLat;
-        var distR = bMaxLat - minLat;
-
-        var innerWidth = maxLon - minLon;
-        var outerWidth = bMaxLon - bMinLon;
-
-        float propX = innerWidth / outerWidth;
-
-        var newW = (int)Math.Round(w * propX, MidpointRounding.AwayFromZero);
-
-        var innerHeight = maxLat - minLat;
-        var outerHeight = bMaxLat - bMinLat;
-
-        float propY = innerHeight / outerHeight;
-        var newH = (int)Math.Round(h * propY, MidpointRounding.AwayFromZero);
-
-        var ar = newW / (float)newH;
-
-        float propLon = (bMaxLon - bMinLon) / (maxLon - minLon);
-        float propLat = (bMaxLat - bMinLat) / (maxLat - minLat);
-
-        w = 377;
-        h = 812;
-
-        var prop = propLat < propLon ? propLat : propLon;
-        if (propLat < propLon)
-        {
-            newW = (int)(prop * h / 2.0f);
-        }
-        else
-        {
-            newW = (int)(prop * w / 2.0f);
-        }
-
-        // Don't want to call this until all  of the data is loaded..
-        CreateProjector(_satelliteTexture, newW, _tilePlane);
     }
 
     /// <summary>
@@ -446,7 +383,7 @@ public class ThreeDMapScript : MonoBehaviour
                     g.transform.parent = geomContainer.transform;
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 Debug.Log(string.Format("Building load failed"));
             }
@@ -496,7 +433,6 @@ public class ThreeDMapScript : MonoBehaviour
                 ret = new Bounds(latLons.First(), Vector3.zero);
             foreach (var latLon in latLons)
             {
-                var toset = latLon;
                 var bnds = ret.Value;
                 bnds.Encapsulate(latLon);
                 ret = bnds;
