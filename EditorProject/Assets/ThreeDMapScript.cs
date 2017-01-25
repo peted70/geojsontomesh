@@ -27,6 +27,7 @@ public class ThreeDMapScript : MonoBehaviour
     private static List<CompletionHandler> Handlers = new List<CompletionHandler>();
 
     private GameObject _mapContainer;
+    private Bounds _floorPlaneBounds;
 
     private static void WhenDone(string name, Action<object> fn, params EditorCoroutine[] routines)
     {
@@ -62,7 +63,7 @@ public class ThreeDMapScript : MonoBehaviour
         var imageMetadataCoroutine = new EditorCoroutine("Image Metadata Loader", mdUrl, MapImageMetadataLoadingDone);
         _coRoutines.Add(imageMetadataCoroutine);
 
-        WhenDone("Image Data Loading", AllImageDataLoaded, imageCoroutine, imageMetadataCoroutine);
+        //WhenDone("Image Data Loading", AllImageDataLoaded, imageCoroutine, imageMetadataCoroutine);
         WhenDone("All Loading", LoadingComplete, imageCoroutine, imageMetadataCoroutine, geomCoroutine);
 
         RecreateMapContainer();
@@ -81,6 +82,8 @@ public class ThreeDMapScript : MonoBehaviour
 
     private void LoadingComplete(object obj)
     {
+        CreateTexture((int)_floorPlaneBounds.size.x, (int)_floorPlaneBounds.size.z, _tileMetadata);
+
         _coRoutines.Clear();
 
         EditorUtility.DisplayProgressBar("Done", "", 100.0f);
@@ -133,11 +136,58 @@ public class ThreeDMapScript : MonoBehaviour
         float propLon = (bMaxLon - bMinLon) / (maxLon - minLon);
         float propLat = (bMaxLat - bMinLat) / (maxLat - minLat);
 
-        var prop = propLat > propLon ? propLat : propLon * 2.0f;
-        newW = (int)(1.0f / prop * w / 2.0f);
+        w = 377;
+        h = 812;
+
+        var prop = propLat < propLon ? propLat : propLon;
+        if (propLat < propLon)
+        {
+            newW = (int)(prop * h / 2.0f);
+        }
+        else
+        {
+            newW = (int)(prop * w / 2.0f);
+        }
 
         // Don't want to call this until all  of the data is loaded..
         CreateProjector(_satelliteTexture, newW, _tilePlane);
+    }
+
+    /// <summary>
+    /// Set up the map texture. The texture will be projected orthographically onto
+    /// the geometry and tile plane so we need to work out the correct orthographic 
+    /// size to use. We need the size (in Unity coords of the tile floor plane) and also the
+    /// map image and associated metadata. The metadata will tell us which sub rect of the 
+    /// supplied image we want to project onto the Tile Floor plane.
+    /// </summary>
+    /// <param name="TilePlaneWidth"></param>
+    /// <param name="TilePlaneHeight"></param>
+    /// <param name="TileMetadata"></param>
+    private void CreateTexture(int TilePlaneWidth, int TilePlaneHeight, MetadataRootobject TileMetadata)
+    {
+        var bbox = _tileMetadata.resourceSets[0].resources[0].bbox;
+
+        var bMinLat = bbox[0];
+        var bMinLon = bbox[1];
+        var bMaxLat = bbox[2];
+        var bMaxLon = bbox[3];
+
+        float propLon = (bMaxLon - bMinLon) / (maxLon - minLon);
+        float propLat = (bMaxLat - bMinLat) / (maxLat - minLat);
+
+        var prop = propLat < propLon ? propLat : propLon;
+        int orthoSize = 0;
+        if (propLat < propLon)
+        {
+            orthoSize = (int)(prop * TilePlaneHeight / 2.0f);
+        }
+        else
+        {
+            orthoSize = (int)(prop * TilePlaneWidth / 2.0f);
+        }
+
+        // Don't want to call this until all  of the data is loaded..
+        CreateProjector(_satelliteTexture, orthoSize, _tilePlane);
     }
 
     private void MapImageMetadataLoadingDone(UnityWebRequest obj)
@@ -272,6 +322,7 @@ public class ThreeDMapScript : MonoBehaviour
         // Centre on the origin..
         var polyArray = poly.ToList().Select(p => (p.ToVector3xz() - tb.Value.center).ToVector2xz());
         var planeMesh = Triangulator.CreateMesh(polyArray.ToArray());
+        _floorPlaneBounds = planeMesh.bounds;
 
         {
             Vector3[] old = planeMesh.vertices;
