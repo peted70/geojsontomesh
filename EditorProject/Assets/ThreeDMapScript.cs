@@ -87,8 +87,14 @@ public class ThreeDMapScript : MonoBehaviour
         _tilePlane.name = "Tile Plane";
         _tilePlane.AddComponent(typeof(MeshFilter));
         _tilePlane.AddComponent(typeof(MeshRenderer));
-        _mapMaterial = new Material(Shader.Find("Standard"));
-        _mapMaterial.color = Color.white;
+        var shader = Shader.Find("HoloToolkit/Unlit Configurable");
+        if (shader == null)
+        {
+            Debug.Log("Error: HoloToolkit/Unlit Configurable Shader not available.");
+            return;
+        }
+
+        _mapMaterial = new Material(shader);
         _tilePlane.GetComponent<MeshRenderer>().material = _mapMaterial;
 
         UpdateProgress(0.02f, "Initialising..");
@@ -467,8 +473,6 @@ public class ThreeDMapScript : MonoBehaviour
                     //dist.y += 
                     g.transform.Translate(dist);
 
-                    Material m = new Material(Shader.Find("Standard"));
-                    m.color = Color.grey;
                     if (building.properties.tags != null)
                     {
                         if (!string.IsNullOrEmpty(building.properties.tags.name))
