@@ -378,7 +378,7 @@ public class ThreeDMapScript : MonoBehaviour
 
     private void ProcessBuildings(IEnumerable<Feature> buildings, Bounds? tb, GameObject container)
     {
-        int buildingCount = 0;
+        //int buildingCount = 0;
         var geomContainer = new GameObject("Geometry");
         geomContainer.transform.parent = container.transform;
 
