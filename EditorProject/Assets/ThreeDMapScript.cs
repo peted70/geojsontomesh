@@ -16,6 +16,8 @@ public class ThreeDMapScript : MonoBehaviour
     public float minLat = 51.5073134351f;
     public float minLon = -0.1295164166f;
 
+    private const double MESH_SCALAR = 0.01;
+
     private float progress = 0.0f;
     private bool _useProjector = false;
 
@@ -321,16 +323,17 @@ public class ThreeDMapScript : MonoBehaviour
         {
             Vector3[] old = planeMesh.vertices;
             int[] triangles = planeMesh.triangles;
-            Vector3[] vertices = new Vector3[triangles.Length];
+            Vector3[] verts = new Vector3[triangles.Length];
             for (int i = 0; i < triangles.Length; i++)
             {
-                vertices[i] = old[triangles[i]];
+                verts[i] = old[triangles[i]];
                 triangles[i] = i;
             }
         }
 
+        Vector3[] vertices = planeMesh.vertices;
+
         {
-            Vector3[] vertices = planeMesh.vertices;
             Vector2[] uvs = new Vector2[vertices.Length];
 
             for (int i = 0; i < uvs.Length; i++)
@@ -340,7 +343,11 @@ public class ThreeDMapScript : MonoBehaviour
             planeMesh.uv = uvs;
         }
 
-        //planeMesh.uv = uvs;
+        for (int i = 0; i < vertices.Length; i++)
+        {
+            vertices[i] = vertices[i] * (float)MESH_SCALAR;
+        }
+        planeMesh.vertices = vertices;
         planeMesh.RecalculateNormals();
         planeMesh.RecalculateBounds();
         var planeBounds = planeMesh.bounds;
@@ -450,7 +457,7 @@ public class ThreeDMapScript : MonoBehaviour
                     mesh.vertices = vertices;
                     mesh.triangles = triangles;
 
-                    var dist = bound.center - tb.Value.center;
+                    var dist = (bound.center - tb.Value.center);
 
                     Vector3[] vertxs = mesh.vertices;
                     Vector2[] uvs = new Vector2[vertxs.Length];
@@ -463,6 +470,13 @@ public class ThreeDMapScript : MonoBehaviour
                         uvs[i] = MapCoordToUV(xz, _tileMetadata);
                     }
 
+                    for (int i = 0; i < vertices.Length; i++)
+                    {
+                        vertices[i] = vertices[i] * (float)MESH_SCALAR;
+                    }
+
+                    mesh.vertices = vertices;
+
                     mesh.uv = uvs;
                     mesh.RecalculateBounds();
                     mesh.RecalculateNormals();
@@ -471,7 +485,7 @@ public class ThreeDMapScript : MonoBehaviour
 
                     // also, translate the building in y by half of its height..
                     //dist.y += 
-                    g.transform.Translate(dist);
+                    g.transform.Translate(dist * (float)MESH_SCALAR);
 
                     if (building.properties.tags != null)
                     {
