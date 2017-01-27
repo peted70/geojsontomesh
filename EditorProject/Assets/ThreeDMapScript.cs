@@ -17,6 +17,7 @@ public class ThreeDMapScript : MonoBehaviour
     public float minLon = -0.1295164166f;
 
     private float progress = 0.0f;
+    private bool _useProjector = false;
 
     Texture2D _satelliteTexture;
     MetadataRootobject _tileMetadata = null;
@@ -29,9 +30,11 @@ public class ThreeDMapScript : MonoBehaviour
     private GameObject _mapContainer;
     private Bounds _floorPlaneBounds;
 
+    private Material _mapMaterial;
+
     private static void WhenDone(string name, Action<object> fn, params EditorCoroutine[] routines)
     {
-        Handlers.Add(new CompletionHandler(name, fn, routines));
+        Handlers.Insert(0, new CompletionHandler(name, fn, routines));
     }
 
     private void UpdateProgress(float incr, string msg)
@@ -42,6 +45,9 @@ public class ThreeDMapScript : MonoBehaviour
 
     public void Load()
     {
+        _coRoutines.Clear();
+        Handlers.Clear();
+
         EditorApplication.update += EditorUpdate;
         UpdateProgress(0.02f, "Initialising..");
 
@@ -63,6 +69,15 @@ public class ThreeDMapScript : MonoBehaviour
         var imageMetadataCoroutine = new EditorCoroutine("Image Metadata Loader", mdUrl, MapImageMetadataLoadingDone);
         _coRoutines.Add(imageMetadataCoroutine);
 
+        // If we are using the texture projector then these can be done in parallel
+        //WhenDone("Load Geom", LoadGeoJSON, geomCoroutine);
+        WhenDone("Load Map Image", LoadMapImage, imageCoroutine);
+        //WhenDone("Load Map Metadata", LoadMapMetadata, imageMetadataCoroutine);
+
+        // For UV texturing we need to load the metadata image up before we can load
+        // the building geometry so we can generate the UVs inside the mesh building 
+        // routines
+        WhenDone("Geom and Metadata", LoadGeomAndMapImageMetadata, imageMetadataCoroutine, geomCoroutine);
         WhenDone("All Loading", LoadingComplete, imageCoroutine, imageMetadataCoroutine, geomCoroutine);
 
         RecreateMapContainer();
@@ -72,16 +87,49 @@ public class ThreeDMapScript : MonoBehaviour
         _tilePlane.name = "Tile Plane";
         _tilePlane.AddComponent(typeof(MeshFilter));
         _tilePlane.AddComponent(typeof(MeshRenderer));
-        Material mt = new Material(Shader.Find("Standard"));
-        mt.color = Color.white;
-        _tilePlane.GetComponent<MeshRenderer>().material = mt;
+        _mapMaterial = new Material(Shader.Find("Standard"));
+        _mapMaterial.color = Color.white;
+        _tilePlane.GetComponent<MeshRenderer>().material = _mapMaterial;
 
         UpdateProgress(0.02f, "Initialising..");
+    }
+
+    private void LoadGeomAndMapImageMetadata(object obj)
+    {
+        var list = obj as List<EditorCoroutine>;
+        var co = list.First() as EditorCoroutine;
+        MapImageMetadataLoadingDone((UnityWebRequest)co.GetCurrent());
+        var geomCo = list[1] as EditorCoroutine;
+        GeoJsonLoadingDone((UnityWebRequest)geomCo.GetCurrent());
+    }
+
+    private void LoadMapMetadata(object obj)
+    {
+        var list = obj as List<EditorCoroutine>;
+        var co = list.First() as EditorCoroutine;
+        MapImageMetadataLoadingDone((UnityWebRequest)co.GetCurrent());
+    }
+
+    private void LoadMapImage(object obj)
+    {
+        var list = obj as List<EditorCoroutine>;
+        var co = list.First() as EditorCoroutine;
+        MapImageLoadingDone((UnityWebRequest)co.GetCurrent());
+    }
+
+    private void LoadGeoJSON(object obj)
+    {
+        var list = obj as List<EditorCoroutine>;
+        var co = list.First() as EditorCoroutine;
+        GeoJsonLoadingDone((UnityWebRequest)co.GetCurrent());
     }
 
     private void LoadingComplete(object obj)
     {
         CreateTexture((int)_floorPlaneBounds.size.x, (int)_floorPlaneBounds.size.z, _tileMetadata);
+
+        //_tilePlane.GetComponent<MeshRenderer>().material.mainTexture = _satelliteTexture;
+        _mapMaterial.mainTexture = _satelliteTexture;
 
         _coRoutines.Clear();
 
@@ -123,8 +171,11 @@ public class ThreeDMapScript : MonoBehaviour
             orthoSize = (int)(prop * TilePlaneWidth / 2.0f);
         }
 
-        // Don't want to call this until all  of the data is loaded..
-        CreateProjector(_satelliteTexture, orthoSize, _tilePlane);
+        if (_useProjector == true)
+        {
+            // Don't want to call this until all  of the data is loaded..
+            CreateProjector(_satelliteTexture, orthoSize, _tilePlane);
+        }
     }
 
     private void MapImageMetadataLoadingDone(UnityWebRequest obj)
@@ -272,12 +323,51 @@ public class ThreeDMapScript : MonoBehaviour
             }
         }
 
+        {
+            Vector3[] vertices = planeMesh.vertices;
+            Vector2[] uvs = new Vector2[vertices.Length];
+
+            for (int i = 0; i < uvs.Length; i++)
+            {
+                uvs[i] = MapCoordToUV(vertices[i].ToVector2xz(), _tileMetadata);
+            }
+            planeMesh.uv = uvs;
+        }
+
         //planeMesh.uv = uvs;
         planeMesh.RecalculateNormals();
         planeMesh.RecalculateBounds();
         var planeBounds = planeMesh.bounds;
         _tilePlane.GetComponent<MeshFilter>().mesh = planeMesh;
         _tilePlane.transform.parent = container.transform;
+    }
+
+    /// <summary>
+    /// Take a 2D map coordinate (in lat/lon) and convert to a UV coordinate which will
+    /// index into the map image tile
+    /// </summary>
+    /// <param name="coord"></param>
+    /// <returns></returns>
+    Vector2 MapCoordToUV(Vector2 coord, MetadataRootobject tiledata)
+    {
+        // bbox of the tile image in lat/lon
+        var bbox = _tileMetadata.resourceSets[0].resources[0].bbox;
+
+        var bMinLat = bbox[0];
+        var bMinLon = bbox[1];
+        var bMaxLat = bbox[2];
+        var bMaxLon = bbox[3];
+
+        var min = GM.LatLonToMeters(bMinLat, bMinLon);
+        var max = GM.LatLonToMeters(bMaxLat, bMaxLon);
+
+        double lon = coord.x + min.x + 0.5 * (max.x - min.x);
+        double lat = coord.y + min.y + 0.5 * (max.y - min.y);
+
+        double u = (lon - min.x) / (max.x - min.x);
+        double v = (lat - min.y) / (max.y - min.y);
+
+        return new Vector2((float)u, (float)v);
     }
 
     private void ProcessBuildings(IEnumerable<Feature> buildings, Bounds? tb, GameObject container)
@@ -350,15 +440,28 @@ public class ThreeDMapScript : MonoBehaviour
                         vertices[i] = oldVerts[triangles[i]];
                         triangles[i] = i;
                     }
+
                     mesh.vertices = vertices;
                     mesh.triangles = triangles;
 
+                    var dist = bound.center - tb.Value.center;
+
+                    Vector3[] vertxs = mesh.vertices;
+                    Vector2[] uvs = new Vector2[vertxs.Length];
+
+                    for (int i = 0; i < uvs.Length; i++)
+                    {
+                        var xz = vertxs[i].ToVector2xz();
+                        xz.x += dist.x;
+                        xz.y += dist.z;
+                        uvs[i] = MapCoordToUV(xz, _tileMetadata);
+                    }
+
+                    mesh.uv = uvs;
                     mesh.RecalculateBounds();
                     mesh.RecalculateNormals();
 
                     g.GetComponent<MeshFilter>().mesh = mesh;
-
-                    var dist = bound.center - tb.Value.center;
 
                     // also, translate the building in y by half of its height..
                     //dist.y += 
@@ -379,7 +482,7 @@ public class ThreeDMapScript : MonoBehaviour
                             g.name = building.properties.tags.addrstreet;
                         }
                     }
-                    g.GetComponent<MeshRenderer>().material = m;
+                    g.GetComponent<MeshRenderer>().material = _mapMaterial;
                     g.transform.parent = geomContainer.transform;
                 }
             }
@@ -481,6 +584,11 @@ public class EditorCoroutine : IEnumerable
 
     public bool IsComplete() { return _complete;  }
 
+    public object GetCurrent()
+    {
+        return _iter.Current;
+    }
+
     public EditorCoroutine(string name, string http, Action<UnityWebRequest> done)
     {
         _name = name;
@@ -510,7 +618,7 @@ public class EditorCoroutine : IEnumerable
             else if (www.isDone)
             {
                 Debug.Log("CoRoutine: " + _name + " Done.");
-                _done(www);
+                //_done(www);
                 _complete = true;
             }
         }
