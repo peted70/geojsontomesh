@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<doc>
+  <members>
+    <assembly>
+      <name>UnityEngine.TestRunner</name>
+    </assembly>
+    <member name="T:UnityEngine.TestTools.AssertLog">
+      <summary>
+        <para>AssertLog allows you to expect Unity log messages that would normally cause the test to fail.</para>
+      </summary>
+    </member>
+    <member name="M:UnityEngine.TestTools.AssertLog.Expect(UnityEngine.LogType,System.String)">
+      <summary>
+        <para>Expect a log message of a specfic type. If an error, assertion or exception log is expected, the test will not fail. The test will fail if a log message is expected but does not appear.</para>
+      </summary>
+      <param name="type">Log type.</param>
+      <param name="message">Log message to expect.</param>
+    </member>
+    <member name="M:UnityEngine.TestTools.AssertLog.Expect(UnityEngine.LogType,System.Text.RegularExpressions.Regex)">
+      <summary>
+        <para>Expect a log message of a specfic type. If an error, assertion or exception log is expected, the test will not fail. The test will fail if a log message is expected but does not appear.</para>
+      </summary>
+      <param name="type">Log type.</param>
+      <param name="message">Log message to expect.</param>
+    </member>
+    <member name="M:UnityEngine.TestTools.AssertLog.NoUnexpectedReceived">
+      <summary>
+        <para>Triggers an assert if any logs have been received that were not expected. Returns without asserting if all logs received so far have been registered as expected.</para>
+      </summary>
+    </member>
+    <member name="T:UnityEngine.TestTools.TestPlatform">
+      <summary>
+        <para>Platforms the tests can run on.</para>
+      </summary>
+    </member>
+    <member name="T:UnityEngine.TestTools.UnityPlatformAttribute">
+      <summary>
+        <para>Specify on which platform the test should run on.</para>
+      </summary>
+    </member>
+    <member name="M:UnityEngine.TestTools.UnityPlatformAttribute.#ctor(UnityEngine.TestTools.TestPlatform[])">
+      <summary>
+        <para>Paltform the test can run on.</para>
+      </summary>
+      <param name="includePlatforms"></param>
+    </member>
+    <member name="T:UnityEngine.TestTools.UnityTestAttribute">
+      <summary>
+        <para>Special type of a unit test that allows to yield from test in order to skip frames when the test is running.</para>
+      </summary>
+    </member>
+  </members>
+</doc>
