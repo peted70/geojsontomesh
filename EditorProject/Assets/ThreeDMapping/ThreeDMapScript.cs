@@ -5,25 +5,33 @@ using System.Linq;
 using System.Reflection;
 using Assets.Helpers;
 using FullSerializer;
-using UnityEditor;
 using UnityEngine;
 using UnityEngine.Networking;
+using Interfaces;
 
 public class ThreeDMapScript : MonoBehaviour
 {
+    [Header("Latitude Max")]
     public float maxLat = 51.5140574994f;
+    [Header("Longitude Max")]
     public float maxLon = -0.1145303249f;
+    [Header("Latitude Min")]
     public float minLat = 51.5073134351f;
+    [Header("Longitude Min")]
     public float minLon = -0.1295164166f;
+
+    [Header("Building Level Height")]
+    [Range(5.0f, 20.0f)]
+    public float BuildingLevelHeight = 15.0f;
 
     private const double MESH_SCALAR = 0.01;
 
     private float progress = 0.0f;
     private bool _useProjector = false;
 
-    Texture2D _satelliteTexture;
-    MetadataRootobject _tileMetadata = null;
-    GameObject _tilePlane = null;
+    private Texture2D _satelliteTexture;
+    private MetadataRootobject _tileMetadata = null;
+    private GameObject _tilePlane = null;
 
     private List<EditorCoroutine> _coRoutines = new List<EditorCoroutine>();
 
@@ -34,6 +42,10 @@ public class ThreeDMapScript : MonoBehaviour
 
     private Material _mapMaterial;
 
+    private IProgress _progress;
+    private IUpdateHandler _updateHandler;
+    private IDialog _dialog;
+
     private static void WhenDone(string name, Action<object> fn, params EditorCoroutine[] routines)
     {
         Handlers.Insert(0, new CompletionHandler(name, fn, routines));
@@ -41,16 +53,20 @@ public class ThreeDMapScript : MonoBehaviour
 
     private void UpdateProgress(float incr, string msg)
     {
-        progress += incr;
-        EditorUtility.DisplayProgressBar("Loading Map Data", msg, progress);
+        progress = incr;
+        _progress.UpdateProgress(msg, progress);
     }
 
-    public void Load()
+    public void Load(IProgress progress, IUpdateHandler updateHandler, IDialog dialog)
     {
+        _progress = progress;
+        _updateHandler = updateHandler;
+        _dialog = dialog;
+
         _coRoutines.Clear();
         Handlers.Clear();
 
-        EditorApplication.update += EditorUpdate;
+        updateHandler.HookUpdate(EditorUpdate);
         UpdateProgress(0.02f, "Initialising..");
 
         string urlBase = "http://localhost:8165";
@@ -59,16 +75,16 @@ public class ThreeDMapScript : MonoBehaviour
 
         string geomUrl = urlBase + "/" + urlPath + "geoJson?" + urlQuery;
 
-        var geomCoroutine = new EditorCoroutine("Geom Loader", geomUrl, GeoJsonLoadingDone);
+        var geomCoroutine = new EditorCoroutine("Geom Loader", geomUrl);
         _coRoutines.Add(geomCoroutine);
 
         string imgUrl = urlBase + "/" + urlPath + "image?" + urlQuery;
 
-        var imageCoroutine = new EditorCoroutine("Satellite Image Loader", imgUrl, MapImageLoadingDone);
+        var imageCoroutine = new EditorCoroutine("Satellite Image Loader", imgUrl);
         _coRoutines.Add(imageCoroutine);
 
         string mdUrl = urlBase + "/" + urlPath + "metadata?" + urlQuery;
-        var imageMetadataCoroutine = new EditorCoroutine("Image Metadata Loader", mdUrl, MapImageMetadataLoadingDone);
+        var imageMetadataCoroutine = new EditorCoroutine("Image Metadata Loader", mdUrl);
         _coRoutines.Add(imageMetadataCoroutine);
 
         // If we are using the texture projector then these can be done in parallel
@@ -99,7 +115,7 @@ public class ThreeDMapScript : MonoBehaviour
         _mapMaterial = new Material(shader);
         _tilePlane.GetComponent<MeshRenderer>().material = _mapMaterial;
 
-        UpdateProgress(0.02f, "Initialising..");
+        UpdateProgress(0.04f, "Initialising..");
     }
 
     private void LoadGeomAndMapImageMetadata(object obj)
@@ -136,14 +152,12 @@ public class ThreeDMapScript : MonoBehaviour
     {
         CreateTexture((int)_floorPlaneBounds.size.x, (int)_floorPlaneBounds.size.z, _tileMetadata);
 
-        //_tilePlane.GetComponent<MeshRenderer>().material.mainTexture = _satelliteTexture;
         _mapMaterial.mainTexture = _satelliteTexture;
-
         _coRoutines.Clear();
 
-        EditorUtility.DisplayProgressBar("Done", "", 100.0f);
-        EditorUtility.ClearProgressBar();
-        EditorApplication.update -= EditorUpdate;
+        UpdateProgress(1.0f, "Done");
+        _progress.Clear();
+        _updateHandler.UnhookUpdate(EditorUpdate);
     }
 
     /// <summary>
@@ -222,7 +236,7 @@ public class ThreeDMapScript : MonoBehaviour
             }
         };
 
-        EditorUtility.DisplayProgressBar("Loaded Data..", "", 0.1f);
+        UpdateProgress(0.1f, "Loaded Geo JSON");
 
         Debug.Log(res.downloadHandler.text);
         var data = ParseData(res.downloadHandler.text);
@@ -236,9 +250,9 @@ public class ThreeDMapScript : MonoBehaviour
         // Use the centre of the tile bounding box
         var tb = GetBoundingBox(TileBounds);
 
-        EditorUtility.DisplayProgressBar("Loading Building Data", "", 0.15f);
+        UpdateProgress(0.15f, "Loading Building Data");
         ProcessBuildings(buildings, tb, _mapContainer);
-        EditorUtility.DisplayProgressBar("Creating Floor", "", 0.9f);
+        UpdateProgress(0.9f, "Creating Floor");
         GenerateFloorPlane(tb, _mapContainer);
     }
 
@@ -292,10 +306,10 @@ public class ThreeDMapScript : MonoBehaviour
         {
             _coRoutines.Clear();
 
-            EditorUtility.DisplayProgressBar("Done", "", 1.0f);
-            EditorUtility.ClearProgressBar();
-            EditorApplication.update -= EditorUpdate;
-            EditorUtility.DisplayDialog("Error", ex.Message, "OK");
+            UpdateProgress(1.0f, "Done");
+            _progress.Clear();
+            _updateHandler.UnhookUpdate(EditorUpdate);
+            _dialog.DisplayDialog("Error", ex.Message);
         }
     }
 
@@ -430,13 +444,12 @@ public class ThreeDMapScript : MonoBehaviour
 
                     // Work out the height of the building either from height or estimate from 
                     // number of levels or failing that, just one level..
-                    const float oneLevel = 16.0f;
                     int numLevels = 1;
                     if (!string.IsNullOrEmpty(building.properties.tags.building_levels))
                     {
                         numLevels = int.Parse(building.properties.tags.building_levels);
                     }
-                    var mesh = Triangulator.CreateMesh(verts.ToArray(), numLevels * oneLevel);
+                    var mesh = Triangulator.CreateMesh(verts.ToArray(), numLevels * BuildingLevelHeight);
                     var g = new GameObject();
                     g.AddComponent(typeof(MeshFilter));
                     g.AddComponent(typeof(MeshRenderer));
@@ -607,10 +620,9 @@ public class EditorCoroutine : IEnumerable
         return _iter.Current;
     }
 
-    public EditorCoroutine(string name, string http, Action<UnityWebRequest> done)
+    public EditorCoroutine(string name, string http)
     {
         _name = name;
-        _done = done;
         _url = http;
         _iter = GetEnumerator();
     }
@@ -636,7 +648,6 @@ public class EditorCoroutine : IEnumerable
             else if (www.isDone)
             {
                 Debug.Log("CoRoutine: " + _name + " Done.");
-                //_done(www);
                 _complete = true;
             }
         }
@@ -649,3 +660,4 @@ public class EditorCoroutine : IEnumerable
         yield return www;
     }
 }
+
