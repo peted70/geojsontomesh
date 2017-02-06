@@ -98,27 +98,6 @@ namespace ThreeDMapDataAPI.Controllers
             return Ok(str);
         }
 
-        //// GET api/values
-        //// http://localhost:8165/api/mapping?maxLat=51.5140574994&maxLon=-0.1145303249&minLat=51.5073134351&minLon=-0.1295164166
-        //[HttpGet]
-        //public async Task<ActionResult> Get(GeoRect rect)
-        //{
-        //    if (!ModelState.IsValid)
-        //    {
-        //        return new JsonResult(ModelState);
-        //    }
-
-        //    var httpStr = $"http://overpass-api.de/api/interpreter?data=[out:json];(node[\"building\"]({rect.MinLat},{rect.MinLon},{rect.MaxLat},{rect.MaxLon});way[\"building\"]({rect.MinLat},{rect.MinLon},{rect.MaxLat},{rect.MaxLon});relation[\"building\"]({rect.MinLat},{rect.MinLon},{rect.MaxLat},{rect.MaxLon}););out body;>;out skel qt;";
-        //    var http = new HttpClient();
-        //    var tsk = await http.GetAsync(httpStr);
-        //    var strTsk = await tsk.Content.ReadAsStringAsync();
-
-        //    Converter.FilesRoot = _he.WebRootPath + Path.DirectorySeparatorChar.ToString();
-        //    var converter = new Converter();
-        //    var geojson = converter.OsmToGeoJSON(strTsk);
-        //    return Content(geojson);
-        //}
-
         private async Task<string> GetGeoJSON(GeoRect rect)
         {
             var httpStr = $"http://overpass-api.de/api/interpreter?data=[out:json];(node[\"building\"]({rect.MinLat},{rect.MinLon},{rect.MaxLat},{rect.MaxLon});way[\"building\"]({rect.MinLat},{rect.MinLon},{rect.MaxLat},{rect.MaxLon});relation[\"building\"]({rect.MinLat},{rect.MinLon},{rect.MaxLat},{rect.MaxLon}););out body;>;out skel qt;";
