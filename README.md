@@ -1,8 +1,10 @@
 # HoloLens 3D Mapping in Unity
 See http://peted.azurewebsites.net/hololens-3d-mapping/ for further details and usage
+
 [![Alt text](https://img.youtube.com/vi/FSyBHbckXew/0.jpg)](https://www.youtube.com/watch?v=FSyBHbckXew)
+
 ![alt tag](https://raw.github.com/peted70/geojsontomesh/master/img/somerset%20house.PNG)
-![alt tag](https://raw.github.com/peted70/geojsontomesh/master/img/londoninunity.PNG)
+
 # Editor
 To use you can add an empty GameObject into your scene and then add the 
 ThreeDMapScript as a new component to that GameObject. The 
@@ -18,3 +20,5 @@ from data in the GeoJSON.
 ![alt tag](https://raw.github.com/peted70/geojsontomesh/master/img/custom-editor.PNG)
 # REST API
 To run the REST API either load the ASP.NET Core project in Visual Studio and press F5 or navigate in a shell to the folder containing the project.json file and execute the command dotnet run
+
+![alt tag](https://raw.github.com/peted70/geojsontomesh/master/img/londoninunity.PNG)
