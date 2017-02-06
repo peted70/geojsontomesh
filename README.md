@@ -15,4 +15,4 @@ by a separate mesh as can be seen in the scene hierarchy window and is named
 from data in the GeoJSON. 
 ![alt tag](https://raw.github.com/peted70/geojsontomesh/master/img/custom-editor.PNG)
 # REST API
-To run the REST API
+To run the REST API either load the ASP.NET Core project in Visual Studio and press F5 or navigate in a shell to the folder containing the project.json file and execute the command dotnet run
