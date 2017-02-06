@@ -1,6 +1,6 @@
 # HoloLens 3D Mapping in Unity
 See http://peted.azurewebsites.net/hololens-3d-mapping/ for further details and usage
-[![Alt text](https://img.youtube.com/vi/VID/0.jpg)](https://www.youtube.com/watch?v=FSyBHbckXew)
+[![Alt text](https://img.youtube.com/vi/FSyBHbckXew/0.jpg)](https://www.youtube.com/watch?v=FSyBHbckXew)
 ![alt tag](https://raw.github.com/peted70/geojsontomesh/master/img/somerset%20house.PNG)
 ![alt tag](https://raw.github.com/peted70/geojsontomesh/master/img/londoninunity.PNG)
 # Editor
