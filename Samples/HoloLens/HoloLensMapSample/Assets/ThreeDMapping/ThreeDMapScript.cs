@@ -113,7 +113,7 @@ public class ThreeDMapScript : MonoBehaviour
         }
 
         _mapMaterial = new Material(shader);
-        _tilePlane.GetComponent<MeshRenderer>().material = _mapMaterial;
+        _tilePlane.GetComponent<MeshRenderer>().sharedMaterial = _mapMaterial;
 
         UpdateProgress(0.04f, "Initialising..");
     }
@@ -513,7 +513,7 @@ public class ThreeDMapScript : MonoBehaviour
                             g.name = building.properties.tags.addrstreet;
                         }
                     }
-                    g.GetComponent<MeshRenderer>().material = _mapMaterial;
+                    g.GetComponent<MeshRenderer>().sharedMaterial = _mapMaterial;
                     g.transform.parent = geomContainer.transform;
                 }
             }

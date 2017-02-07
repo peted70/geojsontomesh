@@ -17,6 +17,7 @@ namespace ThreeDMapDataAPI
                 .UseContentRoot(Directory.GetCurrentDirectory())
                 .UseIISIntegration()
                 .UseStartup<Startup>()
+                .UseUrls("http://localhost:8157/")
                 .Build();
 
             host.Run();
