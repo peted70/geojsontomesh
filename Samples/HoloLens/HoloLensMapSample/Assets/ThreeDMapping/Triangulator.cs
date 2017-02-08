@@ -223,15 +223,27 @@ public class Triangulator
         return m;
     }
 
-    static bool IsClockwise(Vector2[] poly)
+    public static bool IsClockwise(IList<Vector2> vertices)
     {
-        float cnt = 0;
-        for (int i = 0;i<poly.Length-1;i++)
+        double sum = 0.0;
+        for (int i = 0; i < vertices.Count; i++)
         {
-            cnt += (poly[i + 1].x - poly[i].x) * (poly[i + 1].y - poly[i].y);
+            Vector2 v1 = vertices[i];
+            Vector2 v2 = vertices[(i + 1) % vertices.Count]; 
+            sum += (v2.x - v1.x) * (v2.y + v1.y);
         }
-        return cnt >= 0;
+        return sum > 0.0;
     }
+
+    //static bool IsClockwise(Vector2[] poly)
+    //{
+    //    float cnt = 0;
+    //    for (int i = 0;i<poly.Length-1;i++)
+    //    {
+    //        cnt += (poly[i + 1].x - poly[i].x) * (poly[i + 1].y - poly[i].y);
+    //    }
+    //    return cnt >= 0;
+    //}
 
     private static Mesh SideExtrusion(Mesh mesh, bool Clockwise)
     {
@@ -247,24 +259,24 @@ public class Triangulator
             // Draw the polygons for this double-sided as some
             // of the buildings appear to follow a different winding
             // rule..
-            //if (Clockwise)
-            //{
+            if (!Clockwise)
+            {
                 indices.Add(i4);
                 indices.Add(i1);
                 indices.Add(i3);
                 indices.Add(i2);
                 indices.Add(i1);
                 indices.Add(i4);
-            //}
-            //else
-            //{
+            }
+            else
+            {
                 indices.Add(i4);
                 indices.Add(i3);
                 indices.Add(i1);
                 indices.Add(i2);
                 indices.Add(i4);
                 indices.Add(i1);
-            //}
+            }
         }
         mesh.triangles = indices.ToArray();
         return mesh;
