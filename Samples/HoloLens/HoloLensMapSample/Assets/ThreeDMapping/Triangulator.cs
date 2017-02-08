@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
 using System.Collections;
+using System;
 
 public class Triangulator
 {
@@ -161,8 +162,11 @@ public class Triangulator
 
     public static Mesh CreateMesh(Vector2[] poly, float extrusion)
     {
+        Array.Resize<Vector2>(ref poly, poly.Length - 1);
+
         // convert polygon to triangles
-        Triangulator triangulator = new Triangulator(poly);
+        Triangulator triangulator = new Triangulator(poly, false);
+        //Triangulator triangulator = new Triangulator(poly);
 
         int[] tris = triangulator.Triangulate();
 
@@ -179,18 +183,19 @@ public class Triangulator
             vertices[i + poly.Length].z = poly[i].y;  // back vertex     
         }
 
-        int[] triangles = new int[tris.Length * 2 + poly.Length * 6];
+        int[] triangles = new int[tris.Length];
 
         int count_tris = 0;
 
-        for (int i = 0; i < tris.Length; i += 3)
-        {
-            triangles[i] = tris[i];
-            triangles[i + 1] = tris[i + 2];
-            triangles[i + 2] = tris[i + 1];
-        } // front vertices
+        // If we want to render the underneath
+        //for (int i = 0; i < tris.Length; i += 3)
+        //{
+        //    triangles[i] = tris[i];
+        //    triangles[i + 1] = tris[i + 2];
+        //    triangles[i + 2] = tris[i + 1];
+        //} // front vertices
 
-        count_tris += tris.Length;
+        //count_tris += tris.Length;
 
         for (int i = 0; i < tris.Length; i += 3)
         {
@@ -211,14 +216,24 @@ public class Triangulator
 
         m.triangles = triangles;
         m.uv = uvs;
-        m = Triangulator.SideExtrusion(m);
+        m = Triangulator.SideExtrusion(m, IsClockwise(poly));
         m.RecalculateNormals();
         m.RecalculateBounds();
 
         return m;
     }
 
-    private static Mesh SideExtrusion(Mesh mesh)
+    static bool IsClockwise(Vector2[] poly)
+    {
+        float cnt = 0;
+        for (int i = 0;i<poly.Length-1;i++)
+        {
+            cnt += (poly[i + 1].x - poly[i].x) * (poly[i + 1].y - poly[i].y);
+        }
+        return cnt >= 0;
+    }
+
+    private static Mesh SideExtrusion(Mesh mesh, bool Clockwise)
     {
         List<int> indices = new List<int>(mesh.triangles);
         int count = (mesh.vertices.Length / 2);
@@ -232,19 +247,24 @@ public class Triangulator
             // Draw the polygons for this double-sided as some
             // of the buildings appear to follow a different winding
             // rule..
-            indices.Add(i4);
-            indices.Add(i1);
-            indices.Add(i3);
-            indices.Add(i4);
-            indices.Add(i3);
-            indices.Add(i1);
-
-            indices.Add(i2);
-            indices.Add(i1);
-            indices.Add(i4);
-            indices.Add(i2);
-            indices.Add(i4);
-            indices.Add(i1);
+            //if (Clockwise)
+            //{
+                indices.Add(i4);
+                indices.Add(i1);
+                indices.Add(i3);
+                indices.Add(i2);
+                indices.Add(i1);
+                indices.Add(i4);
+            //}
+            //else
+            //{
+                indices.Add(i4);
+                indices.Add(i3);
+                indices.Add(i1);
+                indices.Add(i2);
+                indices.Add(i4);
+                indices.Add(i1);
+            //}
         }
         mesh.triangles = indices.ToArray();
         return mesh;

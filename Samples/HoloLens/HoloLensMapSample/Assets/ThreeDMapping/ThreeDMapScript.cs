@@ -102,6 +102,7 @@ public class ThreeDMapScript : MonoBehaviour
 
         // Create the tile plane..
         _tilePlane = new GameObject();
+        _tilePlane.isStatic = true;
         _tilePlane.name = "Tile Plane";
         _tilePlane.AddComponent(typeof(MeshFilter));
         _tilePlane.AddComponent(typeof(MeshRenderer));
@@ -221,7 +222,12 @@ public class ThreeDMapScript : MonoBehaviour
         }
 
         GameObject containerGameObject = new GameObject("MapContainer");
+        containerGameObject.isStatic = true;
         containerGameObject.transform.parent = gameObject.transform;
+        containerGameObject.transform.localRotation = Quaternion.identity;
+        containerGameObject.transform.localPosition = Vector3.zero;
+        containerGameObject.transform.localScale = Vector3.one;
+
         _mapContainer = containerGameObject;
     }
 
@@ -401,6 +407,7 @@ public class ThreeDMapScript : MonoBehaviour
     {
         //int buildingCount = 0;
         var geomContainer = new GameObject("Geometry");
+        geomContainer.isStatic = true;
         geomContainer.transform.parent = container.transform;
 
         foreach (var building in buildings)
@@ -449,8 +456,14 @@ public class ThreeDMapScript : MonoBehaviour
                     {
                         numLevels = int.Parse(building.properties.tags.building_levels);
                     }
+
+                    //if (GetBuildingName(building).StartsWith("Fortune"))
+                    //{
+                    //    int x = 4;
+                    //}
                     var mesh = Triangulator.CreateMesh(verts.ToArray(), numLevels * BuildingLevelHeight);
                     var g = new GameObject();
+                    g.isStatic = true;
                     g.AddComponent(typeof(MeshFilter));
                     g.AddComponent(typeof(MeshRenderer));
 
@@ -500,19 +513,10 @@ public class ThreeDMapScript : MonoBehaviour
                     //dist.y += 
                     g.transform.Translate(dist * (float)MESH_SCALAR);
 
-                    if (building.properties.tags != null)
-                    {
-                        if (!string.IsNullOrEmpty(building.properties.tags.name))
-                            g.name = building.properties.tags.name;
-                        else if (!string.IsNullOrEmpty(building.properties.tags.addrhousename))
-                        {
-                            g.name = building.properties.tags.addrhousename;
-                        }
-                        else if (!string.IsNullOrEmpty(building.properties.tags.addrstreet))
-                        {
-                            g.name = building.properties.tags.addrstreet;
-                        }
-                    }
+                    var name = GetBuildingName(building);
+                    if (!string.IsNullOrEmpty(name))
+                        g.name = name;
+
                     g.GetComponent<MeshRenderer>().sharedMaterial = _mapMaterial;
                     g.transform.parent = geomContainer.transform;
                 }
@@ -522,6 +526,25 @@ public class ThreeDMapScript : MonoBehaviour
                 Debug.Log(string.Format("Building load failed"));
             }
         }
+    }
+
+    private string GetBuildingName(Feature building)
+    {
+        string ret = null;
+        if (building.properties.tags == null)
+            return ret;
+
+        if (!string.IsNullOrEmpty(building.properties.tags.name))
+            ret = building.properties.tags.name;
+        else if (!string.IsNullOrEmpty(building.properties.tags.addrhousename))
+        {
+            ret = building.properties.tags.addrhousename;
+        }
+        else if (!string.IsNullOrEmpty(building.properties.tags.addrstreet))
+        {
+            ret = building.properties.tags.addrstreet;
+        }
+        return ret;
     }
 
     private GeoJsonRoot ParseData(string geoJsonData)
