@@ -46,7 +46,7 @@ PlayerSettings:
   defaultScreenHeight: 768
   defaultScreenWidthWeb: 960
   defaultScreenHeightWeb: 600
-  m_StereoRenderingPath: 0
+  m_StereoRenderingPath: 2
   m_ActiveColorSpace: 0
   m_MTRendering: 1
   m_MobileMTRendering: 0
@@ -76,7 +76,7 @@ PlayerSettings:
   forceSingleInstance: 0
   resizableWindow: 0
   useMacAppStoreValidation: 0
-  gpuSkinning: 0
+  gpuSkinning: 1
   graphicsJobs: 0
   xboxPIXTextureCapture: 0
   xboxEnableAvatar: 0
@@ -521,7 +521,7 @@ PlayerSettings:
   metroCertificateNotAfter: 801e4f99cf97d301
   metroApplicationDescription: HoloLensMapSample
   wsaImages: {}
-  metroTileShortName: 
+  metroTileShortName: HoloLensMapSample
   metroCommandLineArgsFile: 
   metroTileShowName: 0
   metroMediumTileShowName: 0

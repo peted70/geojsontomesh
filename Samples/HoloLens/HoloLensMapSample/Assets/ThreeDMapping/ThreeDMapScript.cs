@@ -24,7 +24,7 @@ public class ThreeDMapScript : MonoBehaviour
     [Range(5.0f, 20.0f)]
     public float BuildingLevelHeight = 15.0f;
 
-    private const double MESH_SCALAR = 0.01;
+    private const double MESH_SCALAR = 0.0005;
 
     private float progress = 0.0f;
     private bool _useProjector = false;
@@ -208,7 +208,7 @@ public class ThreeDMapScript : MonoBehaviour
 
     private void MapImageLoadingDone(UnityWebRequest www)
     {
-        _satelliteTexture = new Texture2D(2, 2);
+        _satelliteTexture = new Texture2D(2, 2, TextureFormat.RGBA32, true);
         _satelliteTexture.LoadImage(www.downloadHandler.data);
     }
 
@@ -466,6 +466,11 @@ public class ThreeDMapScript : MonoBehaviour
                     g.isStatic = true;
                     g.AddComponent(typeof(MeshFilter));
                     g.AddComponent(typeof(MeshRenderer));
+
+                    var mr = g.GetComponent<MeshRenderer>();
+                    mr.receiveShadows = false;
+                    mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                    mr.lightProbeUsage = UnityEngine.Rendering.LightProbeUsage.Off;
 
                     // If you want to get flat shading then you need a unique vertex for each 
                     // face. I haven't processed the data like that so have run this code as a post 
